@@ -48,7 +48,6 @@ th,td{border-bottom:1px solid rgba(255,255,255,.2);padding:6px}
 
 <div class="content">
 
-<!-- PDV -->
 <div id="pdv" class="section active">
   <h2>PDV / Caixa</h2>
   <p id="statusCaixa"></p>
@@ -65,27 +64,24 @@ th,td{border-bottom:1px solid rgba(255,255,255,.2);padding:6px}
   <button onclick="fecharCaixa()">Fechar Caixa</button>
 </div>
 
-<!-- CLIENTES -->
 <div id="clientes" class="section">
   <h2>Clientes</h2>
-  <input id="nomeCliente" placeholder="Nome do cliente">
+  <input id="nomeCliente" placeholder="Nome">
   <select id="planoCliente"></select>
   <button onclick="salvarCliente()">Salvar Cliente</button>
   <ul id="listaClientes"></ul>
 </div>
 
-<!-- PLANOS -->
 <div id="planos" class="section">
   <h2>Planos</h2>
   <input id="nomePlano" placeholder="Nome do plano">
   <input id="valorPlano" type="number" placeholder="Valor do plano">
-  <input id="qtdPlano" type="number" placeholder="Qtd de procedimentos">
-  <input id="tipoPlano" placeholder="Tipo do serviço (ex: corte)">
+  <input id="qtdPlano" type="number" placeholder="Qtd procedimentos">
+  <input id="tipoPlano" placeholder="Tipo serviço (ex: corte)">
   <button onclick="salvarPlano()">Salvar Plano</button>
   <ul id="listaPlanos"></ul>
 </div>
 
-<!-- PRODUTOS / SERVIÇOS -->
 <div id="produtos" class="section">
   <h2>Produtos / Serviços</h2>
   <input id="nomeProd" placeholder="Nome">
@@ -98,7 +94,6 @@ th,td{border-bottom:1px solid rgba(255,255,255,.2);padding:6px}
   <ul id="listaProdutos"></ul>
 </div>
 
-<!-- DESPESAS -->
 <div id="despesas" class="section">
   <h2>Despesas</h2>
   <input id="descDespesa" placeholder="Descrição">
@@ -107,7 +102,6 @@ th,td{border-bottom:1px solid rgba(255,255,255,.2);padding:6px}
   <ul id="listaDespesas"></ul>
 </div>
 
-<!-- FINANCEIRO -->
 <div id="financeiro" class="section">
   <h2>Financeiro</h2>
   <p>Faturamento: R$ <span id="fat"></span></p>
@@ -119,7 +113,7 @@ th,td{border-bottom:1px solid rgba(255,255,255,.2);padding:6px}
 </div>
 
 <script>
-const db = JSON.parse(localStorage.getItem("db")) || {
+const defaultDB = {
   clientes:[],
   planos:[],
   produtos:[],
@@ -127,6 +121,11 @@ const db = JSON.parse(localStorage.getItem("db")) || {
   despesas:[],
   caixa:{aberto:false}
 };
+
+const db = Object.assign(
+  defaultDB,
+  JSON.parse(localStorage.getItem("db") || "{}")
+);
 
 let carrinho=[];
 
@@ -139,29 +138,39 @@ function show(id){
 }
 
 function render(){
-  statusCaixa.innerText = db.caixa.aberto ? "🟢 Caixa aberto" : "🔴 Caixa fechado";
+  if(statusCaixa)
+    statusCaixa.innerText = db.caixa.aberto ? "🟢 Caixa aberto" : "🔴 Caixa fechado";
 
-  cliente.innerHTML = db.clientes.map(c=>`<option>${c.nome}</option>`).join("");
-  produto.innerHTML = db.produtos.map(p=>`<option>${p.nome}|${p.valor}|${p.tipo}</option>`).join("");
+  if(cliente)
+    cliente.innerHTML = db.clientes.map(c=>`<option>${c.nome}</option>`).join("");
 
-  planoCliente.innerHTML = `<option value="">Sem plano</option>` +
-    db.planos.map(p=>`<option>${p.nome}</option>`).join("");
+  if(produto)
+    produto.innerHTML = db.produtos.map(p=>`<option>${p.nome}|${p.valor}|${p.tipo}</option>`).join("");
 
-  listaClientes.innerHTML = db.clientes.map(c =>
-    `<li>${c.nome} | Plano: ${c.plano||"-"} | Saldo: ${c.saldo||0}</li>`
-  ).join("");
+  if(planoCliente)
+    planoCliente.innerHTML =
+      `<option value="">Sem plano</option>` +
+      db.planos.map(p=>`<option>${p.nome}</option>`).join("");
 
-  listaPlanos.innerHTML = db.planos.map(p =>
-    `<li>${p.nome} - R$ ${p.valor} (${p.qtd}x ${p.tipo})</li>`
-  ).join("");
+  if(listaClientes)
+    listaClientes.innerHTML = db.clientes.map(c =>
+      `<li>${c.nome} | Plano: ${c.plano||"-"} | Saldo: ${c.saldo||0}</li>`
+    ).join("");
 
-  listaProdutos.innerHTML = db.produtos.map(p =>
-    `<li>${p.nome} (${p.tipo})</li>`
-  ).join("");
+  if(listaPlanos)
+    listaPlanos.innerHTML = db.planos.map(p =>
+      `<li>${p.nome} - R$ ${p.valor} (${p.qtd}x ${p.tipo})</li>`
+    ).join("");
 
-  listaDespesas.innerHTML = db.despesas.map(d =>
-    `<li>${d.desc} - R$ ${d.valor}</li>`
-  ).join("");
+  if(listaProdutos)
+    listaProdutos.innerHTML = db.produtos.map(p =>
+      `<li>${p.nome} (${p.tipo})</li>`
+    ).join("");
+
+  if(listaDespesas)
+    listaDespesas.innerHTML = db.despesas.map(d =>
+      `<li>${d.desc} - R$ ${d.valor}</li>`
+    ).join("");
 
   carrinhoRender();
   financeiroRender();
@@ -184,13 +193,13 @@ function fecharCaixa(){ db.caixa.aberto=false; save(); render(); }
 function addItem(){
   if(!db.caixa.aberto) return alert("Abra o caixa");
 
-  const [nome,valor,tipo]=produto.value.split("|");
-  const cli=db.clientes.find(c=>c.nome===cliente.value);
+  const [nome,valor,tipo] = produto.value.split("|");
+  const cli = db.clientes.find(c=>c.nome===cliente.value);
 
   if(cli && cli.plano && tipo==="servico" && cli.saldo>0){
     cli.saldo--;
     save();
-    alert("Plano utilizado. Saldo: "+cli.saldo);
+    alert("Plano usado. Saldo: "+cli.saldo);
     render();
     return;
   }
@@ -201,15 +210,15 @@ function addItem(){
 
 function finalizarVenda(){
   if(carrinho.length===0) return;
-  const totalVenda=carrinho.reduce((s,i)=>s+i.valor,0);
-  db.vendas.push({data:new Date().toISOString(),total:totalVenda});
+  const totalVenda = carrinho.reduce((s,i)=>s+i.valor,0);
+  db.vendas.push({data:new Date().toISOString(), total:totalVenda});
   carrinho=[];
   save();
   render();
 }
 
 function salvarCliente(){
-  const plano=db.planos.find(p=>p.nome===planoCliente.value);
+  const plano = db.planos.find(p=>p.nome===planoCliente.value);
   db.clientes.push({
     nome:nomeCliente.value,
     plano:plano?plano.nome:null,
