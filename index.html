@@ -9,52 +9,53 @@
 body{
   margin:0;
   font-family:Arial,Helvetica,sans-serif;
-  background:url("https://images.unsplash.com/photo-1503951914875-452162b0f3f1");
-  background-size:cover;
-  background-position:center;
+  background:#111;
+  color:#fff;
 }
-.overlay{background:rgba(0,0,0,.65);min-height:100vh;}
 .menu{
-  position:fixed;left:0;top:0;bottom:0;width:70px;
-  background:rgba(0,0,0,.35);
-  display:flex;flex-direction:column;align-items:center;padding-top:20px;
+  display:flex;
+  gap:10px;
+  padding:10px;
+  background:#000;
 }
 .menu button{
-  background:none;border:none;color:#f1c40f;font-size:22px;
-  margin:15px 0;cursor:pointer;
+  background:#222;
+  border:none;
+  color:#fff;
+  padding:10px;
+  cursor:pointer;
 }
-.content{margin-left:90px;padding:20px;color:#fff;}
-.section{display:none}.section.active{display:block}
-input,select,button{padding:10px;border-radius:6px;border:none;margin:4px 0}
-button{cursor:pointer;font-weight:bold}
+.section{display:none;padding:15px}
+.section.active{display:block}
+input,select,button{
+  padding:8px;
+  margin:4px 0;
+}
 table{width:100%;border-collapse:collapse}
-th,td{border-bottom:1px solid rgba(255,255,255,.2);padding:6px}
-.total{font-size:22px;color:#2ecc71}
-.negativo{color:#e74c3c}
+td,th{border-bottom:1px solid #333;padding:6px}
+.total{font-size:20px;color:#2ecc71}
 </style>
 </head>
 
 <body>
-<div class="overlay">
 
 <div class="menu">
-  <button onclick="show('pdv')">💈</button>
-  <button onclick="show('clientes')">👤</button>
-  <button onclick="show('planos')">💳</button>
-  <button onclick="show('estoque')">📦</button>
-  <button onclick="show('despesas')">🧾</button>
-  <button onclick="show('financeiro')">📊</button>
+  <button onclick="show('pdv')">PDV</button>
+  <button onclick="show('clientes')">Clientes</button>
+  <button onclick="show('planos')">Planos</button>
+  <button onclick="show('produtos')">Produtos</button>
+  <button onclick="show('despesas')">Despesas</button>
+  <button onclick="show('financeiro')">Financeiro</button>
 </div>
 
-<div class="content">
-
+<!-- PDV -->
 <div id="pdv" class="section active">
-  <h2>PDV / Caixa</h2>
+  <h2>PDV</h2>
   <p id="statusCaixa"></p>
 
   <select id="cliente"></select>
   <select id="produto"></select>
-  <button onclick="addCarrinho()">Adicionar</button>
+  <button onclick="addItem()">Adicionar</button>
 
   <table id="carrinho"></table>
   <p class="total">Total: R$ <span id="total">0.00</span></p>
@@ -64,36 +65,39 @@ th,td{border-bottom:1px solid rgba(255,255,255,.2);padding:6px}
   <button onclick="fecharCaixa()">Fechar Caixa</button>
 </div>
 
+<!-- CLIENTES -->
 <div id="clientes" class="section">
   <h2>Clientes</h2>
   <input id="nomeCliente" placeholder="Nome">
   <select id="planoCliente"></select>
-  <button onclick="salvarCliente()">Salvar Cliente</button>
+  <button onclick="salvarCliente()">Salvar</button>
   <ul id="listaClientes"></ul>
 </div>
 
+<!-- PLANOS -->
 <div id="planos" class="section">
   <h2>Planos</h2>
   <input id="nomePlano" placeholder="Nome">
-  <input id="valorPlano" type="number" placeholder="Valor">
-  <input id="qtdPlano" type="number" placeholder="Qtd">
-  <input id="tipoPlano" placeholder="Tipo (ex: corte)">
-  <button onclick="salvarPlano()">Salvar Plano</button>
+  <input id="qtdPlano" type="number" placeholder="Qtd procedimentos">
+  <input id="tipoPlano" placeholder="Tipo serviço (ex: corte)">
+  <button onclick="salvarPlano()">Salvar</button>
   <ul id="listaPlanos"></ul>
 </div>
 
-<div id="estoque" class="section">
+<!-- PRODUTOS -->
+<div id="produtos" class="section">
   <h2>Produtos / Serviços</h2>
   <input id="nomeProd" placeholder="Nome">
   <input id="valorProd" type="number" placeholder="Valor">
   <select id="tipoProd">
-    <option value="servico">Serviço</option>
     <option value="produto">Produto</option>
+    <option value="servico">Serviço</option>
   </select>
   <button onclick="salvarProduto()">Salvar</button>
-  <ul id="listaEstoque"></ul>
+  <ul id="listaProdutos"></ul>
 </div>
 
+<!-- DESPESAS -->
 <div id="despesas" class="section">
   <h2>Despesas</h2>
   <input id="descDespesa" placeholder="Descrição">
@@ -102,24 +106,27 @@ th,td{border-bottom:1px solid rgba(255,255,255,.2);padding:6px}
   <ul id="listaDespesas"></ul>
 </div>
 
+<!-- FINANCEIRO -->
 <div id="financeiro" class="section">
   <h2>Financeiro</h2>
-  <p>Faturamento: R$ <span id="fatVal">0.00</span></p>
-  <p>Despesas: R$ <span id="despVal">0.00</span></p>
-  <p class="total">Lucro: R$ <span id="lucroVal">0.00</span></p>
-</div>
-
-</div>
+  <p>Faturamento: R$ <span id="fat"></span></p>
+  <p>Despesas: R$ <span id="desp"></span></p>
+  <p class="total">Lucro: R$ <span id="lucro"></span></p>
 </div>
 
 <script>
 const db = JSON.parse(localStorage.getItem("db")) || {
-  clientes:[], planos:[], produtos:[], vendas:[], despesas:[],
-  caixa:{aberto:false, abertura:0}
+  clientes:[],
+  planos:[],
+  produtos:[],
+  vendas:[],
+  despesas:[],
+  caixa:{aberto:false}
 };
+
 let carrinho=[];
 
-function save(){ localStorage.setItem("db", JSON.stringify(db)); }
+function save(){ localStorage.setItem("db",JSON.stringify(db)); }
 
 function show(id){
   document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
@@ -128,77 +135,70 @@ function show(id){
 }
 
 function render(){
-  document.getElementById("statusCaixa").innerText =
-    db.caixa.aberto ? "🟢 Caixa aberto" : "🔴 Caixa fechado";
+  statusCaixa.innerText = db.caixa.aberto ? "Caixa aberto" : "Caixa fechado";
 
   cliente.innerHTML = db.clientes.map(c=>`<option>${c.nome}</option>`).join("");
   produto.innerHTML = db.produtos.map(p=>`<option>${p.nome}|${p.valor}|${p.tipo}</option>`).join("");
-  planoCliente.innerHTML = `<option value="">Sem plano</option>` +
-    db.planos.map(p=>`<option>${p.nome}</option>`).join("");
+  planoCliente.innerHTML = `<option value="">Sem plano</option>` + db.planos.map(p=>`<option>${p.nome}</option>`).join("");
 
-  if(listaClientes)
-    listaClientes.innerHTML = db.clientes.map(c=>`<li>${c.nome} | Saldo: ${c.saldo||0}</li>`).join("");
-
-  if(listaPlanos)
-    listaPlanos.innerHTML = db.planos.map(p=>`<li>${p.nome}</li>`).join("");
-
-  if(listaEstoque)
-    listaEstoque.innerHTML = db.produtos.map(p=>`<li>${p.nome}</li>`).join("");
-
-  if(listaDespesas)
-    listaDespesas.innerHTML = db.despesas.map(d=>`<li>${d.desc} - R$ ${d.valor}</li>`).join("");
+  listaClientes.innerHTML = db.clientes.map(c=>`<li>${c.nome} | Saldo: ${c.saldo||0}</li>`).join("");
+  listaPlanos.innerHTML = db.planos.map(p=>`<li>${p.nome} (${p.qtd} ${p.tipo})</li>`).join("");
+  listaProdutos.innerHTML = db.produtos.map(p=>`<li>${p.nome} (${p.tipo})</li>`).join("");
+  listaDespesas.innerHTML = db.despesas.map(d=>`<li>${d.desc} - R$ ${d.valor}</li>`).join("");
 
   carrinhoRender();
   financeiroRender();
 }
 
 function carrinhoRender(){
-  let html="<tr><th>Item</th><th>Valor</th></tr>";
-  let soma=0;
-  carrinho.forEach(i=>{
-    html+=`<tr><td>${i.nome}</td><td>R$ ${i.valor.toFixed(2)}</td></tr>`;
-    soma+=i.valor;
-  });
-  carrinho.innerHTML = html;
-  total.innerText = soma.toFixed(2);
+  let h="<tr><th>Item</th><th>Valor</th></tr>";
+  let t=0;
+  carrinho.forEach(i=>{ h+=`<tr><td>${i.nome}</td><td>${i.valor}</td></tr>`; t+=i.valor; });
+  carrinho.innerHTML=h;
+  total.innerText=t.toFixed(2);
 }
 
-function addCarrinho(){
+function abrirCaixa(){ db.caixa.aberto=true; save(); render(); }
+function fecharCaixa(){ db.caixa.aberto=false; save(); render(); }
+
+function addItem(){
   if(!db.caixa.aberto) return alert("Abra o caixa");
-  const [nome,valor,tipo] = produto.value.split("|");
-  carrinho.push({nome, valor:Number(valor)});
+  const [nome,valor,tipo]=produto.value.split("|");
+  const cli=db.clientes.find(c=>c.nome===cliente.value);
+
+  if(cli && cli.plano && tipo==="servico" && cli.saldo>0){
+    cli.saldo--; save(); render();
+    alert("Plano usado. Saldo: "+cli.saldo);
+    return;
+  }
+  carrinho.push({nome,valor:Number(valor)});
   carrinhoRender();
 }
 
 function finalizarVenda(){
-  const totalVenda = carrinho.reduce((s,i)=>s+i.valor,0);
-  db.vendas.push({data:new Date().toISOString(), total:totalVenda});
-  carrinho=[];
-  save(); render();
+  const totalVenda=carrinho.reduce((s,i)=>s+i.valor,0);
+  db.vendas.push({total:totalVenda,data:new Date().toISOString()});
+  carrinho=[]; save(); render();
 }
-
-function abrirCaixa(){
-  db.caixa.aberto=true;
-  db.caixa.abertura=Number(prompt("Valor abertura"));
-  save(); render();
-}
-function fecharCaixa(){ db.caixa.aberto=false; save(); render(); }
 
 function salvarCliente(){
-  db.clientes.push({nome:nomeCliente.value, saldo:0});
+  const p=db.planos.find(p=>p.nome===planoCliente.value);
+  db.clientes.push({nome:nomeCliente.value,plano:p?p.nome:null,saldo:p?p.qtd:0});
   save(); render();
 }
-function salvarPlano(){ db.planos.push({nome:nomePlano.value}); save(); render(); }
-function salvarProduto(){ db.produtos.push({nome:nomeProd.value, valor:+valorProd.value, tipo:tipoProd.value}); save(); render(); }
-function salvarDespesa(){ db.despesas.push({desc:descDespesa.value, valor:+valorDespesa.value}); save(); render(); }
+
+function salvarPlano(){ db.planos.push({nome:nomePlano.value,qtd:+qtdPlano.value,tipo:tipoPlano.value}); save(); render(); }
+function salvarProduto(){ db.produtos.push({nome:nomeProd.value,valor:+valorProd.value,tipo:tipoProd.value}); save(); render(); }
+function salvarDespesa(){ db.despesas.push({desc:descDespesa.value,valor:+valorDespesa.value}); save(); render(); }
 
 function financeiroRender(){
-  const faturamento = db.vendas.reduce((s,v)=>s+v.total,0);
-  const despesas = db.despesas.reduce((s,d)=>s+d.valor,0);
-  fatVal.innerText = faturamento.toFixed(2);
-  despVal.innerText = despesas.toFixed(2);
-  lucroVal.innerText = (faturamento-despesas).toFixed(2);
+  const fat=db.vendas.reduce((s,v)=>s+v.total,0);
+  const desp=db.despesas.reduce((s,d)=>s+d.valor,0);
+  fat.innerText=fat.toFixed(2);
+  desp.innerText=desp.toFixed(2);
+  lucro.innerText=(fat-desp).toFixed(2);
 }
+
 render();
 </script>
 
