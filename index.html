@@ -38,6 +38,7 @@ th,td{border-bottom:1px solid rgba(255,255,255,.2);padding:6px}
 <body>
 <div class="overlay">
 
+<!-- MENU -->
 <div class="menu">
   <button onclick="show('pdv')">💈</button>
   <button onclick="show('clientes')">👤</button>
@@ -81,7 +82,7 @@ th,td{border-bottom:1px solid rgba(255,255,255,.2);padding:6px}
   <input id="nomePlano" placeholder="Nome do plano">
   <input type="number" id="valorPlano" placeholder="Valor mensal">
   <input type="number" id="qtdPlano" placeholder="Qtd procedimentos">
-  <input id="tipoPlano" placeholder="Tipo (ex: Corte)">
+  <input id="tipoPlano" placeholder="Tipo (ex: corte)">
   <button onclick="salvarPlano()">Salvar Plano</button>
   <ul id="listaPlanos"></ul>
 </div>
@@ -114,7 +115,6 @@ th,td{border-bottom:1px solid rgba(255,255,255,.2);padding:6px}
   <p>Faturamento: R$ <span id="fat"></span></p>
   <p>Despesas: R$ <span id="desp"></span></p>
   <p class="total">Lucro: R$ <span id="lucro"></span></p>
-  <button onclick="pdfFinanceiro()">📄 PDF Financeiro</button>
 </div>
 
 </div>
@@ -125,84 +125,140 @@ const db = JSON.parse(localStorage.getItem("db")) || {
   clientes:[], planos:[], produtos:[], vendas:[], despesas:[],
   caixa:{aberto:false, abertura:0}
 };
+
 let carrinho=[];
 
 function save(){localStorage.setItem("db",JSON.stringify(db));}
-function show(id){document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));document.getElementById(id).classList.add("active");render();}
+
+function show(id){
+  document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+  render();
+}
 
 function render(){
   cliente.innerHTML=db.clientes.map(c=>`<option>${c.nome}</option>`).join("");
   produto.innerHTML=db.produtos.map(p=>`<option>${p.nome}|${p.valor}|${p.tipo}</option>`).join("");
   planoCliente.innerHTML=`<option value="">Sem plano</option>`+db.planos.map(p=>`<option>${p.nome}</option>`).join("");
 
-  listaClientes.innerHTML=db.clientes.map(c=>`<li>${c.nome} | Plano:${c.plano||"-"} | Saldo:${c.saldo||0}</li>`).join("");
+  listaClientes.innerHTML=db.clientes.map(c =>
+    `<li>${c.nome} | Plano: ${c.plano||"-"} | Saldo: ${c.saldo??0}</li>`
+  ).join("");
+
   listaPlanos.innerHTML=db.planos.map(p=>`<li>${p.nome} (${p.qtd} ${p.tipo})</li>`).join("");
   listaEstoque.innerHTML=db.produtos.map(p=>`<li>${p.nome} (${p.tipo})</li>`).join("");
-  listaDespesas.innerHTML=db.despesas.map(d=>`<li>${d.desc} R$ ${d.valor}</li>`).join("");
+  listaDespesas.innerHTML=db.despesas.map(d=>`<li>${d.desc} - R$ ${d.valor}</li>`).join("");
 
   statusCaixa.innerText=db.caixa.aberto?"🟢 Caixa aberto":"🔴 Caixa fechado";
+
   carrinhoRender();
   financeiroRender();
 }
 
 function carrinhoRender(){
   let h="<tr><th>Item</th><th>Valor</th></tr>"; let t=0;
-  carrinho.forEach(i=>{h+=`<tr><td>${i.nome}</td><td>R$ ${i.valor}</td></tr>`;t+=i.valor});
-  carrinho.innerHTML=h; document.getElementById("carrinho").innerHTML=h;
+  carrinho.forEach(i=>{
+    h+=`<tr><td>${i.nome}</td><td>R$ ${i.valor.toFixed(2)}</td></tr>`;
+    t+=i.valor;
+  });
+  document.getElementById("carrinho").innerHTML=h;
   total.innerText=t.toFixed(2);
 }
 
+/* 🔥 CORREÇÃO DEFINITIVA DO PLANO */
 function addCarrinho(){
-  if(!db.caixa.aberto) return alert("Abra o caixa");
-  const [nome,valor,tipo]=produto.value.split("|");
-  const cli=db.clientes.find(c=>c.nome===cliente.value);
-  if(cli && cli.plano && tipo==="servico" && cli.saldo>0){
-    cli.saldo--; save(); alert("Plano usado. Saldo:"+cli.saldo); return;
+  if(!db.caixa.aberto){
+    alert("Abra o caixa");
+    return;
   }
-  carrinho.push({nome,valor:Number(valor)});
+
+  const [nome, valor, tipo] = produto.value.split("|");
+  const cli = db.clientes.find(c => c.nome === cliente.value);
+
+  if(cli && cli.plano && tipo==="servico"){
+    const serv = nome.toLowerCase();
+    if(cli.saldo>0 && cli.tipoPlano && serv.includes(cli.tipoPlano)){
+      cli.saldo -= 1;
+      save();
+      render();
+      alert("Plano utilizado. Saldo restante: "+cli.saldo);
+      return;
+    }
+  }
+
+  carrinho.push({nome, valor:Number(valor)});
   carrinhoRender();
 }
 
 function finalizarVenda(){
   const totalVenda=carrinho.reduce((s,i)=>s+i.valor,0);
   db.vendas.push({data:new Date().toISOString(),total:totalVenda});
-  carrinho=[]; save(); render();
+  carrinho=[];
+  save();
+  render();
 }
 
-function abrirCaixa(){db.caixa.aberto=true;db.caixa.abertura=Number(prompt("Valor abertura"));save();render();}
-function fecharCaixa(){db.caixa.aberto=false;save();render();}
+function abrirCaixa(){
+  db.caixa.aberto=true;
+  db.caixa.abertura=Number(prompt("Valor de abertura"));
+  save();
+  render();
+}
+
+function fecharCaixa(){
+  db.caixa.aberto=false;
+  save();
+  render();
+}
 
 function salvarCliente(){
   const p=db.planos.find(x=>x.nome===planoCliente.value);
-  db.clientes.push({nome:nomeCliente.value,plano:p?p.nome:null,saldo:p?p.qtd:0});
-  save();render();
+  db.clientes.push({
+    nome:nomeCliente.value,
+    plano:p?p.nome:null,
+    saldo:p?Number(p.qtd):0,
+    tipoPlano:p?p.tipo.toLowerCase():null
+  });
+  save();
+  render();
 }
-function salvarPlano(){db.planos.push({nome:nomePlano.value,valor:+valorPlano.value,qtd:+qtdPlano.value,tipo:tipoPlano.value});save();render();}
-function salvarProduto(){db.produtos.push({nome:nomeProd.value,valor:+valorProd.value,tipo:tipoProd.value});save();render();}
-function salvarDespesa(){db.despesas.push({desc:descDespesa.value,valor:+valorDespesa.value});save();render();}
+
+function salvarPlano(){
+  db.planos.push({
+    nome:nomePlano.value,
+    valor:+valorPlano.value,
+    qtd:+qtdPlano.value,
+    tipo:tipoPlano.value.toLowerCase()
+  });
+  save();
+  render();
+}
+
+function salvarProduto(){
+  db.produtos.push({
+    nome:nomeProd.value,
+    valor:+valorProd.value,
+    tipo:tipoProd.value
+  });
+  save();
+  render();
+}
+
+function salvarDespesa(){
+  db.despesas.push({
+    desc:descDespesa.value,
+    valor:+valorDespesa.value
+  });
+  save();
+  render();
+}
 
 function financeiroRender(){
   const fat=db.vendas.reduce((s,v)=>s+v.total,0);
   const desp=db.despesas.reduce((s,d)=>s+d.valor,0);
-  fatSpan=document.getElementById("fat");
-  despSpan=document.getElementById("desp");
-  lucroSpan=document.getElementById("lucro");
-  fatSpan.innerText=fat.toFixed(2);
-  despSpan.innerText=desp.toFixed(2);
-  lucroSpan.innerText=(fat-desp).toFixed(2);
-  lucroSpan.className=(fat-desp)<0?"negativo":"";
-}
-
-function pdfFinanceiro(){
-  const {jsPDF}=window.jspdf;
-  const pdf=new jsPDF();
-  const fat=db.vendas.reduce((s,v)=>s+v.total,0);
-  const desp=db.despesas.reduce((s,d)=>s+d.valor,0);
-  pdf.text("RELATÓRIO FINANCEIRO",10,10);
-  pdf.text("Faturamento: R$ "+fat.toFixed(2),10,25);
-  pdf.text("Despesas: R$ "+desp.toFixed(2),10,35);
-  pdf.text("Lucro: R$ "+(fat-desp).toFixed(2),10,45);
-  pdf.save("financeiro.pdf");
+  fat.innerText=fat.toFixed(2);
+  desp.innerText=desp.toFixed(2);
+  lucro.innerText=(fat-desp).toFixed(2);
 }
 
 render();
