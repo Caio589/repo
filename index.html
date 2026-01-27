@@ -5,6 +5,8 @@
 <title>PDV Barbearia</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
 <style>
 body{
   margin:0;
@@ -63,6 +65,7 @@ th,td{border-bottom:1px solid rgba(255,255,255,.2);padding:6px}
   <button onclick="finalizarVenda()">Finalizar Venda</button>
   <button onclick="abrirCaixa()">Abrir Caixa</button>
   <button onclick="fecharCaixa()">Fechar Caixa</button>
+  <button onclick="pdfCaixa()">📄 PDF Caixa</button>
 </div>
 
 <!-- CLIENTES -->
@@ -113,13 +116,14 @@ th,td{border-bottom:1px solid rgba(255,255,255,.2);padding:6px}
   <p>Faturamento: R$ <span id="fat"></span></p>
   <p>Despesas: R$ <span id="desp"></span></p>
   <p class="total">Lucro: R$ <span id="lucro"></span></p>
+  <button onclick="pdfFinanceiro()">📊 PDF Financeiro</button>
 </div>
 
 </div>
 </div>
 
 <script>
-// ===== DB BLINDADO =====
+// ===== DB SEGURO =====
 const rawDB = JSON.parse(localStorage.getItem("db") || "{}");
 const db = {
   clientes: Array.isArray(rawDB.clientes) ? rawDB.clientes : [],
@@ -130,11 +134,9 @@ const db = {
   caixa: rawDB.caixa || { aberto:false }
 };
 
-let carrinho = [];
+let carrinho=[];
 
-function save(){
-  localStorage.setItem("db", JSON.stringify(db));
-}
+function save(){ localStorage.setItem("db", JSON.stringify(db)); }
 
 function show(id){
   document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
@@ -142,7 +144,7 @@ function show(id){
   render();
 }
 
-// ===== RENDER SEGURO =====
+// ===== RENDER =====
 function render(){
   statusCaixa.innerText = db.caixa.aberto ? "🟢 Caixa aberto" : "🔴 Caixa fechado";
 
@@ -210,8 +212,16 @@ function addItem(){
 
 function finalizarVenda(){
   if(carrinho.length===0) return;
+
   const totalVenda = carrinho.reduce((s,i)=>s+i.valor,0);
-  db.vendas.push({data:new Date().toISOString(), total:totalVenda});
+
+  db.vendas.push({
+    data: new Date().toLocaleString(),
+    cliente: cliente.value,
+    itens: [...carrinho],
+    total: totalVenda
+  });
+
   carrinho=[];
   save();
   render();
@@ -227,7 +237,12 @@ function salvarCliente(){
   });
 
   if(plano){
-    db.vendas.push({data:new Date().toISOString(), total:plano.valor});
+    db.vendas.push({
+      data:new Date().toLocaleString(),
+      cliente:nomeCliente.value,
+      itens:[{nome:"Plano "+plano.nome, valor:plano.valor}],
+      total:plano.valor
+    });
   }
 
   save();
@@ -271,6 +286,40 @@ function financeiroRender(){
   fat.innerText=faturamento.toFixed(2);
   desp.innerText=despesas.toFixed(2);
   lucro.innerText=(faturamento-despesas).toFixed(2);
+}
+
+// ===== PDF CAIXA =====
+function pdfCaixa(){
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF();
+
+  let y = 10;
+  pdf.text("RESUMO DO CAIXA",10,y); y+=10;
+  pdf.text("Data: "+new Date().toLocaleString(),10,y); y+=10;
+
+  db.vendas.forEach(v=>{
+    pdf.text(`• ${v.data} | ${v.cliente} | R$ ${v.total.toFixed(2)}`,10,y);
+    y+=8;
+    if(y>270){ pdf.addPage(); y=10; }
+  });
+
+  pdf.save("resumo-caixa.pdf");
+}
+
+// ===== PDF FINANCEIRO =====
+function pdfFinanceiro(){
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF();
+
+  const faturamento=db.vendas.reduce((s,v)=>s+v.total,0);
+  const despesas=db.despesas.reduce((s,d)=>s+d.valor,0);
+
+  pdf.text("RELATÓRIO FINANCEIRO",10,10);
+  pdf.text("Faturamento: R$ "+faturamento.toFixed(2),10,30);
+  pdf.text("Despesas: R$ "+despesas.toFixed(2),10,40);
+  pdf.text("Lucro: R$ "+(faturamento-despesas).toFixed(2),10,50);
+
+  pdf.save("relatorio-financeiro.pdf");
 }
 
 render();
