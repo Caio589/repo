@@ -294,13 +294,28 @@ function pdfCaixa(){
   const pdf = new jsPDF();
 
   let y = 10;
-  pdf.text("RESUMO DO CAIXA",10,y); y+=10;
-  pdf.text("Data: "+new Date().toLocaleString(),10,y); y+=10;
+  pdf.text("RESUMO DO CAIXA", 10, y); 
+  y += 10;
 
-  db.vendas.forEach(v=>{
-    pdf.text(`• ${v.data} | ${v.cliente} | R$ ${v.total.toFixed(2)}`,10,y);
-    y+=8;
-    if(y>270){ pdf.addPage(); y=10; }
+  pdf.text("Data: " + new Date().toLocaleString(), 10, y);
+  y += 10;
+
+  db.vendas.forEach(v => {
+    const valor = Number(v.total) || 0;   // 🔒 blindagem
+    const clienteVenda = v.cliente || "—";
+    const dataVenda = v.data || "";
+
+    pdf.text(
+      `• ${dataVenda} | ${clienteVenda} | R$ ${valor.toFixed(2)}`,
+      10,
+      y
+    );
+
+    y += 8;
+    if(y > 270){
+      pdf.addPage();
+      y = 10;
+    }
   });
 
   pdf.save("resumo-caixa.pdf");
