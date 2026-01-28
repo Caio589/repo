@@ -42,62 +42,30 @@ th,td{border-bottom:1px solid #444;padding:6px}
   <h2>PDV / Caixa</h2>
   <p id="statusCaixa"></p>
 
+  <div>
+    <input id="valorAbertura" type="number" placeholder="Valor abertura do caixa">
+    <button onclick="abrirCaixa()">Abrir Caixa</button>
+  </div>
+
   <select id="cliente"></select>
   <select id="produto"></select>
+
+  <select id="pagamento">
+    <option value="dinheiro">Dinheiro</option>
+    <option value="pix">Pix</option>
+    <option value="cartao">Cartão</option>
+  </select>
+
   <button onclick="addItem()">Adicionar</button>
 
   <table id="carrinho"></table>
   <p class="total">Total: R$ <span id="total">0.00</span></p>
 
   <button onclick="finalizarVenda()">Finalizar Venda</button>
-  <button onclick="abrirCaixa()">Abrir Caixa</button>
   <button onclick="fecharCaixa()">Fechar Caixa</button>
+  <button onclick="pdfFechamento()">📄 PDF Fechamento</button>
 
   <div id="resumoCaixa"></div>
-</div>
-
-<!-- AGENDA -->
-<div id="agenda" class="section">
-  <h2>Agenda</h2>
-  <input type="date" id="dataAgenda">
-  <select id="horaAgenda"></select>
-  <select id="clienteAgenda"></select>
-  <select id="servicoAgenda"></select>
-  <button onclick="salvarAgendamento()">Agendar</button>
-  <ul id="listaAgenda"></ul>
-</div>
-
-<!-- CLIENTES -->
-<div id="clientes" class="section">
-  <h2>Clientes</h2>
-  <input id="nomeCliente" placeholder="Nome">
-  <select id="planoCliente"></select>
-  <button onclick="salvarCliente()">💾 Salvar</button>
-  <ul id="listaClientes"></ul>
-</div>
-
-<!-- PLANOS -->
-<div id="planos" class="section">
-  <h2>Planos</h2>
-  <input id="nomePlano" placeholder="Nome">
-  <input id="valorPlano" type="number" placeholder="Valor">
-  <input id="qtdPlano" type="number" placeholder="Qtd">
-  <select id="tipoPlano"></select>
-  <button onclick="salvarPlano()">💾 Salvar</button>
-  <ul id="listaPlanos"></ul>
-</div>
-
-<!-- PRODUTOS -->
-<div id="produtos" class="section">
-  <h2>Produtos / Serviços</h2>
-  <input id="nomeProd" placeholder="Nome">
-  <input id="valorProd" type="number" placeholder="Valor">
-  <select id="tipoProd">
-    <option value="produto">Produto</option>
-    <option value="servico">Serviço</option>
-  </select>
-  <button onclick="salvarProduto()">💾 Salvar</button>
-  <ul id="listaProdutos"></ul>
 </div>
 
 <!-- DESPESAS -->
@@ -112,117 +80,45 @@ th,td{border-bottom:1px solid #444;padding:6px}
 <!-- FINANCEIRO -->
 <div id="financeiro" class="section">
   <h2>Financeiro</h2>
-  <p>Faturamento: R$ <span id="fat">0.00</span></p>
-  <p>Despesas: R$ <span id="desp">0.00</span></p>
-  <p class="total">Lucro: R$ <span id="lucro">0.00</span></p>
+  <p>Faturamento: R$ <span id="fat"></span></p>
+  <p>Despesas: R$ <span id="desp"></span></p>
+  <p class="total">Lucro: R$ <span id="lucro"></span></p>
 </div>
 
 </div>
 
 <script>
-// ===== DB =====
 const rawDB = JSON.parse(localStorage.getItem("db")||"{}");
 const db = {
   clientes: rawDB.clientes||[],
-  planos: rawDB.planos||[],
   produtos: rawDB.produtos||[],
   vendas: rawDB.vendas||[],
   despesas: rawDB.despesas||[],
-  agenda: rawDB.agenda||[],
-  caixa: rawDB.caixa||{aberto:false}
+  caixa: rawDB.caixa||{aberto:false, abertura:0}
 };
 
 let carrinho=[];
-let editCliente=null, editPlano=null, editProduto=null;
 
 function save(){localStorage.setItem("db",JSON.stringify(db));}
 
-function show(id){
-  document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
-  document.getElementById(id).classList.add("active");
+function abrirCaixa(){
+  db.caixa.aberto=true;
+  db.caixa.abertura=Number(valorAbertura.value||0);
+  db.vendas=[];
+  db.despesas=[];
+  save();
   render();
 }
 
-// ===== HORÁRIOS =====
-function gerarHorarios(){
-  let h=[];
-  for(let i=8;i<=20;i++){
-    h.push(`${String(i).padStart(2,"0")}:00`);
-    h.push(`${String(i).padStart(2,"0")}:30`);
-  }
-  return h;
-}
-
-// ===== RENDER =====
-function render(){
-  statusCaixa.innerText=db.caixa.aberto?"🟢 Caixa aberto":"🔴 Caixa fechado";
-
-  cliente.innerHTML=db.clientes.map(c=>`<option>${c.nome}</option>`).join("");
-  produto.innerHTML=db.produtos.map(p=>`<option>${p.nome}|${p.valor}|${p.tipo}</option>`).join("");
-
-  planoCliente.innerHTML=`<option value="">Sem plano</option>`+
-    db.planos.map(p=>`<option>${p.nome}</option>`).join("");
-
-  tipoPlano.innerHTML=db.produtos.filter(p=>p.tipo==="servico")
-    .map(p=>`<option>${p.nome}</option>`).join("");
-
-  listaClientes.innerHTML=db.clientes.map((c,i)=>`
-    <li>${c.nome} | Plano: ${c.plano||"-"} | Saldo: ${c.saldo||0}
-      <button onclick="editarCliente(${i})">✏️</button>
-      <button onclick="excluirCliente(${i})">🗑️</button>
-    </li>`).join("");
-
-  listaPlanos.innerHTML=db.planos.map((p,i)=>`
-    <li>${p.nome} (${p.qtd}x ${p.tipo})
-      <button onclick="editarPlano(${i})">✏️</button>
-      <button onclick="excluirPlano(${i})">🗑️</button>
-    </li>`).join("");
-
-  listaProdutos.innerHTML=db.produtos.map((p,i)=>`
-    <li>${p.nome} (${p.tipo})
-      <button onclick="editarProduto(${i})">✏️</button>
-      <button onclick="excluirProduto(${i})">🗑️</button>
-    </li>`).join("");
-
-  listaDespesas.innerHTML=db.despesas.map((d,i)=>`
-    <li>${d.desc} - R$ ${d.valor.toFixed(2)}
-      <button onclick="excluirDespesa(${i})">🗑️</button>
-    </li>`).join("");
-
-  horaAgenda.innerHTML=gerarHorarios().map(h=>`<option>${h}</option>`).join("");
-  clienteAgenda.innerHTML=cliente.innerHTML;
-  servicoAgenda.innerHTML=db.produtos.filter(p=>p.tipo==="servico")
-    .map(p=>`<option>${p.nome}</option>`).join("");
-
-  carrinhoRender();
-  financeiroRender();
-  renderAgenda();
-}
-
-// ===== PDV / CAIXA =====
 function addItem(){
-  if(!db.caixa.aberto) return alert("Abra o caixa");
-
-  const [nome,valor,tipo]=produto.value.split("|");
-  const cli=db.clientes.find(c=>c.nome===cliente.value);
-
-  if(cli && cli.plano && tipo==="servico" &&
-     !db.planos.find(p=>p.nome===cli.plano && p.tipo===nome))
-    return alert("Serviço não permitido no plano");
-
-  if(cli && cli.plano && tipo==="servico" && cli.saldo>0 &&
-     db.planos.find(p=>p.nome===cli.plano && p.tipo===nome)){
-    cli.saldo--;
-    save(); render();
-    return alert("Plano usado. Saldo: "+cli.saldo);
-  }
-
+  const [nome,valor]=produto.value.split("|");
   carrinho.push({nome,valor:+valor});
   carrinhoRender();
 }
 
 function carrinhoRender(){
-  let html="<tr><th>Item</th><th>Valor</th></tr>", soma=0;
+  let html="<tr><th>Item</th><th>Valor</th></tr>";
+  let soma=0;
   carrinho.forEach(i=>{
     html+=`<tr><td>${i.nome}</td><td>R$ ${i.valor.toFixed(2)}</td></tr>`;
     soma+=i.valor;
@@ -232,130 +128,65 @@ function carrinhoRender(){
 }
 
 function finalizarVenda(){
-  if(!carrinho.length) return;
-  const t=carrinho.reduce((s,i)=>s+i.valor,0);
-  db.vendas.push({data:new Date().toLocaleString(),cliente:cliente.value,total:t});
+  const totalVenda=carrinho.reduce((s,i)=>s+i.valor,0);
+  db.vendas.push({
+    data:new Date().toLocaleString(),
+    itens:[...carrinho],
+    total:totalVenda,
+    pagamento:pagamento.value
+  });
   carrinho=[];
   save(); render();
 }
 
-function abrirCaixa(){
-  db.caixa.aberto=true;
-  db.vendas=[];
-  db.despesas=[];
-  document.getElementById("resumoCaixa").innerHTML="";
-  save(); render();
-}
-
 function fecharCaixa(){
-  const totalVendas=db.vendas.reduce((s,v)=>s+v.total,0);
-  const totalDespesas=db.despesas.reduce((s,d)=>s+d.valor,0);
-  const saldo=totalVendas-totalDespesas;
+  const totPix=db.vendas.filter(v=>v.pagamento==="pix").reduce((s,v)=>s+v.total,0);
+  const totCartao=db.vendas.filter(v=>v.pagamento==="cartao").reduce((s,v)=>s+v.total,0);
+  const totDin=db.vendas.filter(v=>v.pagamento==="dinheiro").reduce((s,v)=>s+v.total,0);
+  const despesas=db.despesas.reduce((s,d)=>s+d.valor,0);
+  const vendasTotal=totPix+totCartao+totDin;
+  const saldo=db.caixa.abertura+vendasTotal-despesas;
 
   db.caixa.aberto=false;
 
-  document.getElementById("resumoCaixa").innerHTML=`
+  resumoCaixa.innerHTML=`
     <h3>Resumo do Caixa</h3>
-    <p>Vendas: R$ ${totalVendas.toFixed(2)}</p>
-    <p>Despesas: R$ ${totalDespesas.toFixed(2)}</p>
-    <p class="${saldo<0?'neg':'total'}">Saldo Final: R$ ${saldo.toFixed(2)}</p>
+    <p>Abertura: R$ ${db.caixa.abertura.toFixed(2)}</p>
+    <p>Pix: R$ ${totPix.toFixed(2)}</p>
+    <p>Cartão: R$ ${totCartao.toFixed(2)}</p>
+    <p>Dinheiro: R$ ${totDin.toFixed(2)}</p>
+    <p>Despesas: R$ ${despesas.toFixed(2)}</p>
+    <p class="total">Saldo Final: R$ ${saldo.toFixed(2)}</p>
   `;
 
-  save(); render();
-}
-
-// ===== CRUD =====
-function salvarCliente(){
-  const p=db.planos.find(pl=>pl.nome===planoCliente.value);
-  const obj={nome:nomeCliente.value,plano:p?p.nome:null,saldo:p?p.qtd:0};
-  editCliente!==null?db.clientes[editCliente]=obj:db.clientes.push(obj);
-  editCliente=null; nomeCliente.value="";
-  save(); render();
-}
-function editarCliente(i){
-  const c=db.clientes[i];
-  nomeCliente.value=c.nome; planoCliente.value=c.plano||"";
-  editCliente=i;
-}
-function excluirCliente(i){
-  if(confirm("Excluir cliente?")){
-    db.clientes.splice(i,1); save(); render();
-  }
-}
-
-function salvarPlano(){
-  const obj={nome:nomePlano.value,valor:+valorPlano.value,qtd:+qtdPlano.value,tipo:tipoPlano.value};
-  editPlano!==null?db.planos[editPlano]=obj:db.planos.push(obj);
-  editPlano=null; nomePlano.value="";
-  save(); render();
-}
-function editarPlano(i){
-  const p=db.planos[i];
-  nomePlano.value=p.nome; valorPlano.value=p.valor;
-  qtdPlano.value=p.qtd; tipoPlano.value=p.tipo;
-  editPlano=i;
-}
-function excluirPlano(i){
-  if(confirm("Excluir plano?")){
-    db.planos.splice(i,1); save(); render();
-  }
-}
-
-function salvarProduto(){
-  const obj={nome:nomeProd.value,valor:+valorProd.value,tipo:tipoProd.value};
-  editProduto!==null?db.produtos[editProduto]=obj:db.produtos.push(obj);
-  editProduto=null; nomeProd.value="";
-  save(); render();
-}
-function editarProduto(i){
-  const p=db.produtos[i];
-  nomeProd.value=p.nome; valorProd.value=p.valor; tipoProd.value=p.tipo;
-  editProduto=i;
-}
-function excluirProduto(i){
-  if(confirm("Excluir item?")){
-    db.produtos.splice(i,1); save(); render();
-  }
+  save();
 }
 
 function salvarDespesa(){
   db.despesas.push({desc:descDespesa.value,valor:+valorDespesa.value});
-  descDespesa.value=""; valorDespesa.value="";
   save(); render();
 }
-function excluirDespesa(i){
-  if(confirm("Excluir despesa?")){
-    db.despesas.splice(i,1); save(); render();
-  }
-}
 
-// ===== AGENDA =====
-function renderAgenda(){
-  if(!dataAgenda.value) return;
-  listaAgenda.innerHTML=db.agenda
-    .filter(a=>a.data===dataAgenda.value)
-    .sort((a,b)=>a.hora.localeCompare(b.hora))
-    .map(a=>`<li>${a.hora} | ${a.cliente} | ${a.servico}</li>`).join("");
-}
-function salvarAgendamento(){
-  if(db.agenda.find(a=>a.data===dataAgenda.value && a.hora===horaAgenda.value))
-    return alert("Horário ocupado");
-  db.agenda.push({
-    data:dataAgenda.value,
-    hora:horaAgenda.value,
-    cliente:clienteAgenda.value,
-    servico:servicoAgenda.value
+function pdfFechamento(){
+  const {jsPDF}=window.jspdf;
+  const pdf=new jsPDF();
+  let y=10;
+
+  pdf.text("FECHAMENTO DE CAIXA",10,y); y+=10;
+  pdf.text("Abertura: R$ "+db.caixa.abertura.toFixed(2),10,y); y+=10;
+
+  db.vendas.forEach(v=>{
+    pdf.text(`${v.data} | ${v.pagamento} | R$ ${v.total.toFixed(2)}`,10,y);
+    y+=8;
+    if(y>270){pdf.addPage();y=10;}
   });
-  save(); renderAgenda();
+
+  pdf.save("fechamento-caixa.pdf");
 }
 
-// ===== FINANCEIRO =====
-function financeiroRender(){
-  const f=db.vendas.reduce((s,v)=>s+v.total,0);
-  const d=db.despesas.reduce((s,i)=>s+i.valor,0);
-  fat.innerText=f.toFixed(2);
-  desp.innerText=d.toFixed(2);
-  lucro.innerText=(f-d).toFixed(2);
+function render(){
+  statusCaixa.innerText=db.caixa.aberto?"🟢 Caixa aberto":"🔴 Caixa fechado";
+  carrinhoRender();
 }
 
 render();
