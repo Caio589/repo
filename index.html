@@ -15,7 +15,7 @@ body{
   background-size:cover;
   background-position:center;
 }
-.overlay{background:rgba(0,0,0,.7);min-height:100vh}
+.overlay{background:rgba(0,0,0,.75);min-height:100vh}
 .menu{
   position:fixed;left:0;top:0;bottom:0;width:70px;
   background:rgba(0,0,0,.4);
@@ -35,7 +35,7 @@ button{cursor:pointer;font-weight:bold}
 table{width:100%;border-collapse:collapse}
 th,td{border-bottom:1px solid rgba(255,255,255,.2);padding:6px}
 .total{font-size:20px;color:#2ecc71}
-.neg{color:#e74c3c}
+canvas{background:#111;border-radius:8px;margin-top:10px}
 </style>
 </head>
 
@@ -44,8 +44,10 @@ th,td{border-bottom:1px solid rgba(255,255,255,.2);padding:6px}
 
 <div class="menu">
   <button onclick="show('pdv')">💈</button>
+  <button onclick="show('clientes')">👤</button>
+  <button onclick="show('planos')">💳</button>
+  <button onclick="show('produtos')">📦</button>
   <button onclick="show('despesas')">🧾</button>
-  <button onclick="show('financeiro')">📊</button>
   <button onclick="show('mensal')">📆</button>
 </div>
 
@@ -61,6 +63,7 @@ th,td{border-bottom:1px solid rgba(255,255,255,.2);padding:6px}
 
   <hr>
 
+  <select id="cliente"></select>
   <select id="produto"></select>
 
   <select id="pagamento">
@@ -81,6 +84,39 @@ th,td{border-bottom:1px solid rgba(255,255,255,.2);padding:6px}
   <div id="resumoCaixa"></div>
 </div>
 
+<!-- CLIENTES -->
+<div id="clientes" class="section">
+  <h2>Clientes</h2>
+  <input id="nomeCliente" placeholder="Nome">
+  <select id="planoCliente"></select>
+  <button onclick="salvarCliente()">Salvar</button>
+  <ul id="listaClientes"></ul>
+</div>
+
+<!-- PLANOS -->
+<div id="planos" class="section">
+  <h2>Planos</h2>
+  <input id="nomePlano" placeholder="Nome">
+  <input id="valorPlano" type="number" placeholder="Valor">
+  <input id="qtdPlano" type="number" placeholder="Qtd serviços">
+  <select id="tipoPlano"></select>
+  <button onclick="salvarPlano()">Salvar</button>
+  <ul id="listaPlanos"></ul>
+</div>
+
+<!-- PRODUTOS -->
+<div id="produtos" class="section">
+  <h2>Produtos / Serviços</h2>
+  <input id="nomeProd" placeholder="Nome">
+  <input id="valorProd" type="number" placeholder="Valor">
+  <select id="tipoProd">
+    <option value="produto">Produto</option>
+    <option value="servico">Serviço</option>
+  </select>
+  <button onclick="salvarProduto()">Salvar</button>
+  <ul id="listaProdutos"></ul>
+</div>
+
 <!-- DESPESAS -->
 <div id="despesas" class="section">
   <h2>Despesas</h2>
@@ -88,14 +124,6 @@ th,td{border-bottom:1px solid rgba(255,255,255,.2);padding:6px}
   <input id="valorDespesa" type="number" placeholder="Valor">
   <button onclick="salvarDespesa()">Adicionar</button>
   <ul id="listaDespesas"></ul>
-</div>
-
-<!-- FINANCEIRO -->
-<div id="financeiro" class="section">
-  <h2>Financeiro</h2>
-  <p>Vendas: R$ <span id="fat">0.00</span></p>
-  <p>Despesas: R$ <span id="desp">0.00</span></p>
-  <p class="total">Lucro: R$ <span id="lucro">0.00</span></p>
 </div>
 
 <!-- RELATÓRIO MENSAL -->
@@ -107,6 +135,9 @@ th,td{border-bottom:1px solid rgba(255,255,255,.2);padding:6px}
   <button onclick="pdfRelatorioMensal()">📄 PDF Mensal</button>
 
   <div id="resumoMensal"></div>
+
+  <canvas id="graficoMensal" width="320" height="180"></canvas>
+
   <ul id="listaMensal"></ul>
 </div>
 
@@ -115,16 +146,17 @@ th,td{border-bottom:1px solid rgba(255,255,255,.2);padding:6px}
 
 <script>
 function show(id){
-  document.querySelectorAll(".section")
-    .forEach(s=>s.classList.remove("active"));
+  document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
   document.getElementById(id).classList.add("active");
 }
 
 const rawDB = JSON.parse(localStorage.getItem("db")||"{}");
 const db = {
+  clientes: rawDB.clientes || [],
+  planos: rawDB.planos || [],
   produtos: rawDB.produtos || [
-    {nome:"Corte",valor:30},
-    {nome:"Barba",valor:20}
+    {nome:"Corte",valor:30,tipo:"servico"},
+    {nome:"Barba",valor:20,tipo:"servico"}
   ],
   vendas: rawDB.vendas || [],
   despesas: rawDB.despesas || [],
@@ -139,20 +171,15 @@ function save(){localStorage.setItem("db",JSON.stringify(db));}
 function abrirCaixa(){
   db.caixa.aberto=true;
   db.caixa.abertura=Number(valorAbertura.value||0);
-  db.vendas=[];
-  db.despesas=[];
-  carrinho=[];
+  db.vendas=[];db.despesas=[];carrinho=[];
   save();render();
 }
-
 function fecharCaixa(){
   const pix=db.vendas.filter(v=>v.pagamento==="pix").reduce((s,v)=>s+v.total,0);
   const cartao=db.vendas.filter(v=>v.pagamento==="cartao").reduce((s,v)=>s+v.total,0);
   const dinheiro=db.vendas.filter(v=>v.pagamento==="dinheiro").reduce((s,v)=>s+v.total,0);
-  const despesas=db.despesas.reduce((s,d)=>s+d.valor,0);
-  const saldo=db.caixa.abertura+pix+cartao+dinheiro-despesas;
-
-  db.caixa.aberto=false;
+  const desp=db.despesas.reduce((s,d)=>s+d.valor,0);
+  const saldo=db.caixa.abertura+pix+cartao+dinheiro-desp;
 
   resumoCaixa.innerHTML=`
     <h3>Resumo do Caixa</h3>
@@ -160,31 +187,40 @@ function fecharCaixa(){
     <p>Pix: R$ ${pix.toFixed(2)}</p>
     <p>Cartão: R$ ${cartao.toFixed(2)}</p>
     <p>Dinheiro: R$ ${dinheiro.toFixed(2)}</p>
-    <p>Despesas: R$ ${despesas.toFixed(2)}</p>
+    <p>Despesas: R$ ${desp.toFixed(2)}</p>
     <p class="total">Saldo Final: R$ ${saldo.toFixed(2)}</p>
   `;
-  save();
+  db.caixa.aberto=false;
+  save();render();
 }
 
 /* ===== PDV ===== */
 function addItem(){
-  const [nome,valor]=produto.value.split("|");
+  const [nome,valor,tipo]=produto.value.split("|");
+  const cli=db.clientes.find(c=>c.nome===cliente.value);
+
+  if(cli && cli.plano && tipo==="servico"){
+    const plano=db.planos.find(p=>p.nome===cli.plano && p.tipo===nome);
+    if(!plano) return alert("Serviço não permitido no plano");
+    if(cli.saldo>0){
+      cli.saldo--; save();render();
+      return alert("Plano usado. Saldo: "+cli.saldo);
+    }
+  }
+
   carrinho.push({nome,valor:+valor});
   renderCarrinho();
 }
-
 function finalizarVenda(){
-  if(!carrinho.length) return;
+  if(!carrinho.length)return;
   const total=carrinho.reduce((s,i)=>s+i.valor,0);
   db.vendas.push({
     data:new Date().toLocaleString(),
     total,
     pagamento:pagamento.value
   });
-  carrinho=[];
-  save();render();
+  carrinho=[];save();render();
 }
-
 function renderCarrinho(){
   let html="<tr><th>Item</th><th>Valor</th></tr>",soma=0;
   carrinho.forEach(i=>{
@@ -195,74 +231,72 @@ function renderCarrinho(){
   total.innerText=soma.toFixed(2);
 }
 
-/* ===== DESPESAS ===== */
+/* ===== CRUD ===== */
+function salvarCliente(){
+  const plano=db.planos.find(p=>p.nome===planoCliente.value);
+  db.clientes.push({nome:nomeCliente.value,plano:plano?plano.nome:null,saldo:plano?plano.qtd:0});
+  save();render();
+}
+function salvarPlano(){
+  db.planos.push({nome:nomePlano.value,valor:+valorPlano.value,qtd:+qtdPlano.value,tipo:tipoPlano.value});
+  save();render();
+}
+function salvarProduto(){
+  db.produtos.push({nome:nomeProd.value,valor:+valorProd.value,tipo:tipoProd.value});
+  save();render();
+}
 function salvarDespesa(){
-  if(!descDespesa.value||!valorDespesa.value)return;
-  db.despesas.push({
-    desc:descDespesa.value,
-    valor:+valorDespesa.value,
-    data:new Date().toLocaleString()
-  });
-  descDespesa.value="";valorDespesa.value="";
+  db.despesas.push({desc:descDespesa.value,valor:+valorDespesa.value,data:new Date().toLocaleString()});
   save();render();
 }
 
-/* ===== RELATÓRIO MENSAL ===== */
+/* ===== RELATÓRIO MENSAL + GRÁFICO ===== */
 function gerarRelatorioMensal(){
   const mes=mesRelatorio.value;
-  if(!mes)return alert("Selecione o mês");
-
+  if(!mes)return;
   const [ano,m]=mes.split("-");
+
   const vendas=db.vendas.filter(v=>{
     const d=new Date(v.data);
-    return d.getFullYear()==ano && (d.getMonth()+1)==m;
-  });
-
-  const despesas=db.despesas.filter(d=>{
-    const dt=new Date(d.data);
-    return dt.getFullYear()==ano && (dt.getMonth()+1)==m;
+    return d.getFullYear()==ano&&(d.getMonth()+1)==m;
   });
 
   const pix=vendas.filter(v=>v.pagamento==="pix").reduce((s,v)=>s+v.total,0);
   const cartao=vendas.filter(v=>v.pagamento==="cartao").reduce((s,v)=>s+v.total,0);
   const dinheiro=vendas.filter(v=>v.pagamento==="dinheiro").reduce((s,v)=>s+v.total,0);
-  const faturamento=pix+cartao+dinheiro;
-  const totalDesp=despesas.reduce((s,d)=>s+d.valor,0);
 
   resumoMensal.innerHTML=`
-    <h3>${m}/${ano}</h3>
     <p>Pix: R$ ${pix.toFixed(2)}</p>
     <p>Cartão: R$ ${cartao.toFixed(2)}</p>
     <p>Dinheiro: R$ ${dinheiro.toFixed(2)}</p>
-    <p>Faturamento: R$ ${faturamento.toFixed(2)}</p>
-    <p>Despesas: R$ ${totalDesp.toFixed(2)}</p>
-    <p class="total">Lucro: R$ ${(faturamento-totalDesp).toFixed(2)}</p>
   `;
 
   listaMensal.innerHTML=vendas.map(v=>
     `<li>${v.data} | ${v.pagamento} | R$ ${v.total.toFixed(2)}</li>`
   ).join("");
+
+  desenharGrafico(pix,cartao,dinheiro);
 }
 
-function pdfRelatorioMensal(){
-  if(!mesRelatorio.value)return;
-  const {jsPDF}=window.jspdf;
-  const pdf=new jsPDF();
-  let y=10;
+function desenharGrafico(pix,cartao,dinheiro){
+  const c=document.getElementById("graficoMensal");
+  const g=c.getContext("2d");
+  g.clearRect(0,0,c.width,c.height);
 
-  pdf.text("RELATÓRIO MENSAL",10,y);y+=10;
-  pdf.text("Mês: "+mesRelatorio.value,10,y);y+=10;
+  const valores=[pix,cartao,dinheiro];
+  const cores=["#2ecc71","#3498db","#f1c40f"];
+  const labels=["Pix","Cartão","Dinheiro"];
+  const max=Math.max(...valores,1);
 
-  listaMensal.querySelectorAll("li").forEach(li=>{
-    pdf.text(li.innerText,10,y);
-    y+=8;
-    if(y>270){pdf.addPage();y=10;}
+  valores.forEach((v,i)=>{
+    const h=(v/max)*120;
+    g.fillStyle=cores[i];
+    g.fillRect(50+i*80,150-h,40,h);
+    g.fillText(labels[i],50+i*80,170);
   });
-
-  pdf.save("relatorio-mensal.pdf");
 }
 
-/* ===== PDF FECHAMENTO ===== */
+/* ===== PDF ===== */
 function pdfFechamento(){
   const {jsPDF}=window.jspdf;
   const pdf=new jsPDF();
@@ -271,25 +305,32 @@ function pdfFechamento(){
   db.vendas.forEach(v=>{
     pdf.text(`${v.data} | ${v.pagamento} | R$ ${v.total.toFixed(2)}`,10,y);
     y+=8;
-    if(y>270){pdf.addPage();y=10;}
   });
   pdf.save("fechamento-caixa.pdf");
+}
+function pdfRelatorioMensal(){
+  const {jsPDF}=window.jspdf;
+  const pdf=new jsPDF();
+  let y=10;
+  pdf.text("RELATÓRIO MENSAL",10,y);y+=10;
+  listaMensal.querySelectorAll("li").forEach(li=>{
+    pdf.text(li.innerText,10,y);
+    y+=8;
+  });
+  pdf.save("relatorio-mensal.pdf");
 }
 
 /* ===== RENDER ===== */
 function render(){
   statusCaixa.innerText=db.caixa.aberto?"🟢 Caixa aberto":"🔴 Caixa fechado";
-  produto.innerHTML=db.produtos
-    .map(p=>`<option value="${p.nome}|${p.valor}">${p.nome} - R$ ${p.valor}</option>`).join("");
-  listaDespesas.innerHTML=db.despesas
-    .map(d=>`<li>${d.desc} - R$ ${d.valor.toFixed(2)}</li>`).join("");
-
-  const vendas=db.vendas.reduce((s,v)=>s+v.total,0);
-  const desp=db.despesas.reduce((s,d)=>s+d.valor,0);
-  fat.innerText=vendas.toFixed(2);
-  document.getElementById("desp").innerText=desp.toFixed(2);
-  lucro.innerText=(vendas-desp).toFixed(2);
-
+  cliente.innerHTML=db.clientes.map(c=>`<option>${c.nome}</option>`).join("");
+  planoCliente.innerHTML=`<option value="">Sem plano</option>`+db.planos.map(p=>`<option>${p.nome}</option>`).join("");
+  tipoPlano.innerHTML=db.produtos.filter(p=>p.tipo==="servico").map(p=>`<option>${p.nome}</option>`).join("");
+  produto.innerHTML=db.produtos.map(p=>`<option value="${p.nome}|${p.valor}|${p.tipo}">${p.nome} - R$ ${p.valor}</option>`).join("");
+  listaClientes.innerHTML=db.clientes.map(c=>`<li>${c.nome} | Plano: ${c.plano||"-"} | Saldo: ${c.saldo||0}</li>`).join("");
+  listaPlanos.innerHTML=db.planos.map(p=>`<li>${p.nome} (${p.qtd}x ${p.tipo})</li>`).join("");
+  listaProdutos.innerHTML=db.produtos.map(p=>`<li>${p.nome} (${p.tipo})</li>`).join("");
+  listaDespesas.innerHTML=db.despesas.map(d=>`<li>${d.desc} - R$ ${d.valor.toFixed(2)}</li>`).join("");
   renderCarrinho();
 }
 render();
