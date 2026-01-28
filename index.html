@@ -32,7 +32,9 @@ table{width:100%;border-collapse:collapse}
 th,td{border-bottom:1px solid rgba(255,255,255,.2);padding:6px}
 .total{font-size:20px;color:#2ecc71}
 .neg{color:#e74c3c}
-canvas{background:#111;border-radius:8px}
+.ok{color:#2ecc71}
+.warn{color:#f1c40f}
+canvas{background:#111;border-radius:8px;margin-top:10px}
 </style>
 </head>
 
@@ -79,11 +81,17 @@ canvas{background:#111;border-radius:8px}
   <button onclick="pdfFechamento()">📄 PDF Fechamento</button>
 
   <div id="resumoCaixa"></div>
+
+  <h4>Conferência de Dinheiro</h4>
+  <input id="dinheiroContado" type="number" placeholder="Dinheiro contado no caixa">
+  <p id="resultadoConferencia"></p>
+
+  <canvas id="graficoCaixa" width="380" height="200"></canvas>
 </div>
 
 <!-- AGENDA -->
 <div id="agenda" class="section">
-  <h2>Agenda 15 em 15</h2>
+  <h2>Agenda (15 em 15)</h2>
   <input type="date" id="dataAgenda">
   <select id="horaAgenda"></select>
   <select id="clienteAgenda"></select>
@@ -106,7 +114,7 @@ canvas{background:#111;border-radius:8px}
   <h2>Planos</h2>
   <input id="nomePlano" placeholder="Nome">
   <input id="valorPlano" type="number" placeholder="Valor">
-  <input id="qtdPlano" type="number" placeholder="Qtd">
+  <input id="qtdPlano" type="number" placeholder="Qtd serviços">
   <select id="tipoPlano"></select>
   <button onclick="salvarPlano()">Salvar</button>
   <ul id="listaPlanos"></ul>
@@ -141,8 +149,7 @@ canvas{background:#111;border-radius:8px}
   <button onclick="gerarRelatorioMensal()">Gerar</button>
   <button onclick="pdfRelatorioMensal()">📄 PDF</button>
   <div id="resumoMensal"></div>
-  <canvas id="graficoMensal" width="360" height="200"></canvas>
-  <ul id="listaMensal"></ul>
+  <canvas id="graficoMensal" width="380" height="200"></canvas>
 </div>
 
 </div>
@@ -168,12 +175,17 @@ const db = {
 
 let carrinho=[];
 let editCliente=null,editPlano=null,editProduto=null,editDespesa=null;
+
 function save(){localStorage.setItem("db",JSON.stringify(db));}
 
 /* ================= AGENDA ================= */
 function gerarHorarios15(){
   let h=[];
-  for(let i=8;i<=20;i++)["00","15","30","45"].forEach(m=>h.push(`${String(i).padStart(2,"0")}:${m}`));
+  for(let i=8;i<=20;i++){
+    ["00","15","30","45"].forEach(m=>{
+      h.push(`${String(i).padStart(2,"0")}:${m}`);
+    });
+  }
   return h;
 }
 function salvarAgendamento(){
@@ -200,37 +212,97 @@ function abrirCaixa(){
   db.vendas=[];db.despesas=[];carrinho=[];
   save();render();
 }
+
 function fecharCaixa(){
-  let pix=0,cartao=0,dinheiro=0;
+  let pix=0,cartao=0,dinheiro=0,planos=0,qtdVendas=0,qtdPlanos=0;
+
   db.vendas.forEach(v=>{
-    if(v.pagamento==="pix")pix+=v.total;
-    if(v.pagamento==="cartao")cartao+=v.total;
-    if(v.pagamento==="dinheiro")dinheiro+=v.total;
+    if(v.tipo==="plano"){
+      planos+=v.total;qtdPlanos++;
+    }else{
+      qtdVendas++;
+      if(v.pagamento==="pix")pix+=v.total;
+      if(v.pagamento==="cartao")cartao+=v.total;
+      if(v.pagamento==="dinheiro")dinheiro+=v.total;
+    }
   });
-  const desp=db.despesas.reduce((s,d)=>s+d.valor,0);
-  const saldo=db.caixa.abertura+pix+cartao+dinheiro-desp;
+
+  const despesas=db.despesas.reduce((s,d)=>s+d.valor,0);
+  const faturamento=pix+cartao+dinheiro+planos;
+  const saldoEsperado=db.caixa.abertura+faturamento-despesas;
 
   resumoCaixa.innerHTML=`
     <h3>Fechamento do Caixa</h3>
     <p>Abertura: R$ ${db.caixa.abertura.toFixed(2)}</p>
+    <p>Faturamento do dia: R$ ${faturamento.toFixed(2)}</p>
     <p>Pix: R$ ${pix.toFixed(2)}</p>
     <p>Cartão: R$ ${cartao.toFixed(2)}</p>
     <p>Dinheiro: R$ ${dinheiro.toFixed(2)}</p>
-    <p>Despesas: R$ ${desp.toFixed(2)}</p>
-    <p class="total">Saldo Final: R$ ${saldo.toFixed(2)}</p>
-    <h4>Vendas:</h4>
-    ${db.vendas.map(v=>`<p>${v.data} | ${v.cliente} | ${v.pagamento} | R$ ${v.total.toFixed(2)}</p>`).join("")}
+    <p>Planos: R$ ${planos.toFixed(2)}</p>
+    <p>Despesas: R$ ${despesas.toFixed(2)}</p>
+    <p>Qtd vendas: ${qtdVendas}</p>
+    <p>Qtd planos: ${qtdPlanos}</p>
+    <p class="total">Saldo esperado: R$ ${saldoEsperado.toFixed(2)}</p>
+    <h4>Vendas do dia</h4>
+    ${db.vendas.map(v=>`<p>${v.data} | ${v.cliente||"—"} | ${v.pagamento} | R$ ${v.total.toFixed(2)}</p>`).join("")}
   `;
+
+  const contado=+dinheiroContado.value||0;
+  const diff=contado-dinheiro;
+
+  if(contado===0){
+    resultadoConferencia.innerText="Informe o dinheiro contado";
+    resultadoConferencia.className="warn";
+  }else if(diff===0){
+    resultadoConferencia.innerText="✔ Caixa conferido, valores batem";
+    resultadoConferencia.className="ok";
+  }else if(diff<0){
+    resultadoConferencia.innerText=`❌ Falta R$ ${Math.abs(diff).toFixed(2)}`;
+    resultadoConferencia.className="neg";
+  }else{
+    resultadoConferencia.innerText=`⚠️ Sobra R$ ${diff.toFixed(2)}`;
+    resultadoConferencia.className="warn";
+  }
+
+  desenharGraficoCaixa(pix,cartao,dinheiro,despesas,saldoEsperado);
+
   db.caixa.aberto=false;
   save();render();
 }
 
+function desenharGraficoCaixa(pix,cartao,dinheiro,despesas,saldo){
+  const g=graficoCaixa.getContext("2d");
+  g.clearRect(0,0,380,200);
+  const valores=[pix,cartao,dinheiro,despesas,saldo];
+  const labels=["Pix","Cartão","Dinheiro","Despesas","Saldo"];
+  const cores=["#2ecc71","#3498db","#f1c40f","#e74c3c","#9b59b6"];
+  const max=Math.max(...valores,1);
+  valores.forEach((v,i)=>{
+    const h=(v/max)*120;
+    g.fillStyle=cores[i];
+    g.fillRect(40+i*65,160-h,40,h);
+    g.fillText(labels[i],40+i*65,180);
+  });
+}
+
 /* ================= PDV ================= */
 function addItem(){
-  const [nome,valor]=produto.value.split("|");
+  const [nome,valor,tipo]=produto.value.split("|");
+  const cli=db.clientes.find(c=>c.nome===cliente.value);
+
+  if(cli&&cli.plano&&tipo==="servico"){
+    const plano=db.planos.find(p=>p.nome===cli.plano&&p.tipo===nome);
+    if(!plano)return alert("Serviço não permitido no plano");
+    if(cli.saldo>0){
+      cli.saldo--;save();render();
+      return alert("Plano usado. Saldo: "+cli.saldo);
+    }
+  }
+
   carrinho.push({nome,valor:+valor});
   renderCarrinho();
 }
+
 function finalizarVenda(){
   const total=carrinho.reduce((s,i)=>s+i.valor,0);
   db.vendas.push({
@@ -241,29 +313,48 @@ function finalizarVenda(){
   });
   carrinho=[];save();render();
 }
+
 function renderCarrinho(){
   let h="<tr><th>Item</th><th>Valor</th></tr>",s=0;
-  carrinho.forEach(i=>{h+=`<tr><td>${i.nome}</td><td>R$ ${i.valor.toFixed(2)}</td></tr>`;s+=i.valor});
-  carrinho.innerHTML=h;total.innerText=s.toFixed(2);
+  carrinho.forEach(i=>{
+    h+=`<tr><td>${i.nome}</td><td>R$ ${i.valor.toFixed(2)}</td></tr>`;
+    s+=i.valor;
+  });
+  carrinho.innerHTML=h;
+  total.innerText=s.toFixed(2);
 }
 
 /* ================= CRUD ================= */
 function salvarCliente(){
-  const p=db.planos.find(pl=>pl.nome===planoCliente.value);
-  const obj={nome:nomeCliente.value,plano:p?p.nome:null,saldo:p?p.qtd:0};
+  const plano=db.planos.find(p=>p.nome===planoCliente.value);
+  const obj={nome:nomeCliente.value,plano:plano?plano.nome:null,saldo:plano?plano.qtd:0};
   editCliente!==null?db.clientes[editCliente]=obj:db.clientes.push(obj);
+
+  if(plano){
+    db.vendas.push({
+      data:new Date().toLocaleString(),
+      cliente:nomeCliente.value,
+      pagamento:"plano",
+      total:plano.valor,
+      tipo:"plano"
+    });
+  }
+
   editCliente=null;save();render();
 }
+
 function salvarPlano(){
   const obj={nome:nomePlano.value,valor:+valorPlano.value,qtd:+qtdPlano.value,tipo:tipoPlano.value};
   editPlano!==null?db.planos[editPlano]=obj:db.planos.push(obj);
   editPlano=null;save();render();
 }
+
 function salvarProduto(){
   const obj={nome:nomeProd.value,valor:+valorProd.value,tipo:tipoProd.value};
   editProduto!==null?db.produtos[editProduto]=obj:db.produtos.push(obj);
   editProduto=null;save();render();
 }
+
 function salvarDespesa(){
   const obj={desc:descDespesa.value,valor:+valorDespesa.value,data:new Date().toLocaleString()};
   editDespesa!==null?db.despesas[editDespesa]=obj:db.despesas.push(obj);
@@ -284,19 +375,22 @@ function gerarRelatorioMensal(){
     <p>Despesas: R$ ${totalDesp.toFixed(2)}</p>
     <p class="total">Lucro Líquido: R$ ${lucro.toFixed(2)}</p>
   `;
-  desenharGrafico([faturamento,totalDesp,lucro]);
+
+  desenharGraficoMensal(faturamento,totalDesp,lucro);
 }
-function desenharGrafico(val){
+
+function desenharGraficoMensal(fat,desp,luc){
   const g=graficoMensal.getContext("2d");
-  g.clearRect(0,0,360,200);
-  const cores=["#2ecc71","#e74c3c","#3498db"];
+  g.clearRect(0,0,380,200);
+  const vals=[fat,desp,luc];
   const labels=["Faturamento","Despesas","Lucro"];
-  const max=Math.max(...val,1);
-  val.forEach((v,i)=>{
+  const cores=["#2ecc71","#e74c3c","#3498db"];
+  const max=Math.max(...vals,1);
+  vals.forEach((v,i)=>{
     const h=(v/max)*120;
     g.fillStyle=cores[i];
-    g.fillRect(40+i*100,160-h,50,h);
-    g.fillText(labels[i],40+i*100,180);
+    g.fillRect(60+i*100,160-h,50,h);
+    g.fillText(labels[i],60+i*100,180);
   });
 }
 
@@ -308,17 +402,17 @@ function pdfFechamento(){
   pdf.text("FECHAMENTO DE CAIXA",10,y);y+=10;
   pdf.text("Abertura: R$ "+db.caixa.abertura.toFixed(2),10,y);y+=10;
   db.vendas.forEach(v=>{
-    pdf.text(`${v.data} | ${v.cliente} | ${v.pagamento} | R$ ${v.total.toFixed(2)}`,10,y);
+    pdf.text(`${v.data} | ${v.cliente||"—"} | ${v.pagamento} | R$ ${v.total.toFixed(2)}`,10,y);
     y+=8;
   });
   pdf.save("fechamento-caixa.pdf");
 }
+
 function pdfRelatorioMensal(){
   const {jsPDF}=window.jspdf;
   const pdf=new jsPDF();
-  let y=10;
-  pdf.text("RELATÓRIO MENSAL",10,y);y+=10;
-  pdf.text(resumoMensal.innerText,10,y);
+  pdf.text("RELATÓRIO MENSAL",10,10);
+  pdf.text(resumoMensal.innerText,10,20);
   pdf.save("relatorio-mensal.pdf");
 }
 
@@ -329,7 +423,7 @@ function render(){
   clienteAgenda.innerHTML=cliente.innerHTML;
   planoCliente.innerHTML=`<option value="">Sem plano</option>`+db.planos.map(p=>`<option>${p.nome}</option>`).join("");
   tipoPlano.innerHTML=db.produtos.filter(p=>p.tipo==="servico").map(p=>`<option>${p.nome}</option>`).join("");
-  produto.innerHTML=db.produtos.map(p=>`<option value="${p.nome}|${p.valor}">${p.nome}</option>`).join("");
+  produto.innerHTML=db.produtos.map(p=>`<option value="${p.nome}|${p.valor}|${p.tipo}">${p.nome}</option>`).join("");
   servicoAgenda.innerHTML=db.produtos.filter(p=>p.tipo==="servico").map(p=>`<option>${p.nome}</option>`).join("");
   horaAgenda.innerHTML=gerarHorarios15().map(h=>`<option>${h}</option>`).join("");
   renderCarrinho();renderAgenda();
