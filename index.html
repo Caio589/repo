@@ -19,6 +19,7 @@ button{cursor:pointer;font-weight:bold}
 table{width:100%;border-collapse:collapse}
 th,td{border-bottom:1px solid #444;padding:6px}
 .total{font-size:20px;color:#2ecc71}
+.neg{color:#e74c3c}
 </style>
 </head>
 
@@ -30,6 +31,7 @@ th,td{border-bottom:1px solid #444;padding:6px}
   <button onclick="show('clientes')">👤</button>
   <button onclick="show('planos')">💳</button>
   <button onclick="show('produtos')">📦</button>
+  <button onclick="show('despesas')">🧾</button>
   <button onclick="show('financeiro')">📊</button>
 </div>
 
@@ -39,14 +41,19 @@ th,td{border-bottom:1px solid #444;padding:6px}
 <div id="pdv" class="section active">
   <h2>PDV / Caixa</h2>
   <p id="statusCaixa"></p>
+
   <select id="cliente"></select>
   <select id="produto"></select>
   <button onclick="addItem()">Adicionar</button>
+
   <table id="carrinho"></table>
   <p class="total">Total: R$ <span id="total">0.00</span></p>
+
   <button onclick="finalizarVenda()">Finalizar Venda</button>
   <button onclick="abrirCaixa()">Abrir Caixa</button>
   <button onclick="fecharCaixa()">Fechar Caixa</button>
+
+  <div id="resumoCaixa"></div>
 </div>
 
 <!-- AGENDA -->
@@ -91,6 +98,15 @@ th,td{border-bottom:1px solid #444;padding:6px}
   </select>
   <button onclick="salvarProduto()">💾 Salvar</button>
   <ul id="listaProdutos"></ul>
+</div>
+
+<!-- DESPESAS -->
+<div id="despesas" class="section">
+  <h2>Despesas</h2>
+  <input id="descDespesa" placeholder="Descrição">
+  <input id="valorDespesa" type="number" placeholder="Valor">
+  <button onclick="salvarDespesa()">Adicionar</button>
+  <ul id="listaDespesas"></ul>
 </div>
 
 <!-- FINANCEIRO -->
@@ -168,6 +184,11 @@ function render(){
       <button onclick="excluirProduto(${i})">🗑️</button>
     </li>`).join("");
 
+  listaDespesas.innerHTML=db.despesas.map((d,i)=>`
+    <li>${d.desc} - R$ ${d.valor.toFixed(2)}
+      <button onclick="excluirDespesa(${i})">🗑️</button>
+    </li>`).join("");
+
   horaAgenda.innerHTML=gerarHorarios().map(h=>`<option>${h}</option>`).join("");
   clienteAgenda.innerHTML=cliente.innerHTML;
   servicoAgenda.innerHTML=db.produtos.filter(p=>p.tipo==="servico")
@@ -178,7 +199,7 @@ function render(){
   renderAgenda();
 }
 
-// ===== PDV =====
+// ===== PDV / CAIXA =====
 function addItem(){
   if(!db.caixa.aberto) return alert("Abra o caixa");
 
@@ -214,11 +235,34 @@ function finalizarVenda(){
   if(!carrinho.length) return;
   const t=carrinho.reduce((s,i)=>s+i.valor,0);
   db.vendas.push({data:new Date().toLocaleString(),cliente:cliente.value,total:t});
-  carrinho=[]; save(); render();
+  carrinho=[];
+  save(); render();
 }
 
-function abrirCaixa(){db.caixa.aberto=true;save();render();}
-function fecharCaixa(){db.caixa.aberto=false;save();render();}
+function abrirCaixa(){
+  db.caixa.aberto=true;
+  db.vendas=[];
+  db.despesas=[];
+  document.getElementById("resumoCaixa").innerHTML="";
+  save(); render();
+}
+
+function fecharCaixa(){
+  const totalVendas=db.vendas.reduce((s,v)=>s+v.total,0);
+  const totalDespesas=db.despesas.reduce((s,d)=>s+d.valor,0);
+  const saldo=totalVendas-totalDespesas;
+
+  db.caixa.aberto=false;
+
+  document.getElementById("resumoCaixa").innerHTML=`
+    <h3>Resumo do Caixa</h3>
+    <p>Vendas: R$ ${totalVendas.toFixed(2)}</p>
+    <p>Despesas: R$ ${totalDespesas.toFixed(2)}</p>
+    <p class="${saldo<0?'neg':'total'}">Saldo Final: R$ ${saldo.toFixed(2)}</p>
+  `;
+
+  save(); render();
+}
 
 // ===== CRUD =====
 function salvarCliente(){
@@ -271,6 +315,17 @@ function editarProduto(i){
 function excluirProduto(i){
   if(confirm("Excluir item?")){
     db.produtos.splice(i,1); save(); render();
+  }
+}
+
+function salvarDespesa(){
+  db.despesas.push({desc:descDespesa.value,valor:+valorDespesa.value});
+  descDespesa.value=""; valorDespesa.value="";
+  save(); render();
+}
+function excluirDespesa(i){
+  if(confirm("Excluir despesa?")){
+    db.despesas.splice(i,1); save(); render();
   }
 }
 
