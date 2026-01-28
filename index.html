@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <title>PDV Barbearia</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
@@ -71,25 +70,21 @@ th,td{border-bottom:1px solid rgba(255,255,255,.2);padding:6px}
 
 <!-- AGENDA -->
 <div id="agenda" class="section">
-  <h2>Agendamento (30 em 30 min)</h2>
-
+  <h2>Agendamento</h2>
   <input type="date" id="dataAgenda">
   <select id="horaAgenda"></select>
   <select id="clienteAgenda"></select>
   <select id="servicoAgenda"></select>
-
   <button onclick="salvarAgendamento()">Agendar</button>
-
-  <h3>Agenda do dia</h3>
   <ul id="listaAgenda"></ul>
 </div>
 
 <!-- CLIENTES -->
 <div id="clientes" class="section">
   <h2>Clientes</h2>
-  <input id="nomeCliente" placeholder="Nome do cliente">
+  <input id="nomeCliente" placeholder="Nome">
   <select id="planoCliente"></select>
-  <button onclick="salvarCliente()">Salvar Cliente</button>
+  <button onclick="salvarCliente()">Salvar</button>
   <ul id="listaClientes"></ul>
 </div>
 
@@ -99,7 +94,7 @@ th,td{border-bottom:1px solid rgba(255,255,255,.2);padding:6px}
   <input id="nomePlano" placeholder="Nome do plano">
   <input id="valorPlano" type="number" placeholder="Valor">
   <input id="qtdPlano" type="number" placeholder="Qtd serviços">
-  <input id="tipoPlano" placeholder="Tipo (ex: corte)">
+  <select id="tipoPlano"></select>
   <button onclick="salvarPlano()">Salvar Plano</button>
   <ul id="listaPlanos"></ul>
 </div>
@@ -132,7 +127,6 @@ th,td{border-bottom:1px solid rgba(255,255,255,.2);padding:6px}
   <p>Faturamento: R$ <span id="fat">0.00</span></p>
   <p>Despesas: R$ <span id="desp">0.00</span></p>
   <p class="total">Lucro: R$ <span id="lucro">0.00</span></p>
-  <button onclick="pdfFinanceiro()">📊 PDF Financeiro</button>
 </div>
 
 </div>
@@ -164,9 +158,9 @@ function show(id){
 // ===== HORÁRIOS =====
 function gerarHorarios(){
   let h=[];
-  for(let hora=8;hora<=20;hora++){
-    h.push(`${hora.toString().padStart(2,"0")}:00`);
-    h.push(`${hora.toString().padStart(2,"0")}:30`);
+  for(let i=8;i<=20;i++){
+    h.push(`${String(i).padStart(2,"0")}:00`);
+    h.push(`${String(i).padStart(2,"0")}:30`);
   }
   return h;
 }
@@ -178,28 +172,27 @@ function render(){
   cliente.innerHTML = db.clientes.map(c=>`<option>${c.nome}</option>`).join("");
   produto.innerHTML = db.produtos.map(p=>`<option>${p.nome}|${p.valor}|${p.tipo}</option>`).join("");
 
-  planoCliente.innerHTML =
-    `<option value="">Sem plano</option>` +
+  planoCliente.innerHTML = `<option value="">Sem plano</option>` +
     db.planos.map(p=>`<option>${p.nome}</option>`).join("");
+
+  tipoPlano.innerHTML = db.produtos
+    .filter(p=>p.tipo==="servico")
+    .map(p=>`<option value="${p.nome}">${p.nome}</option>`).join("");
 
   listaClientes.innerHTML = db.clientes.map(c =>
     `<li>${c.nome} | Plano: ${c.plano||"-"} | Saldo: ${c.saldo||0}</li>`
   ).join("");
 
   listaPlanos.innerHTML = db.planos.map(p =>
-    `<li>${p.nome} - R$ ${p.valor}</li>`
+    `<li>${p.nome} | ${p.qtd}x ${p.tipo}</li>`
   ).join("");
 
   listaProdutos.innerHTML = db.produtos.map(p =>
     `<li>${p.nome} (${p.tipo})</li>`
   ).join("");
 
-  listaDespesas.innerHTML = db.despesas.map(d =>
-    `<li>${d.desc} - R$ ${d.valor}</li>`
-  ).join("");
-
   horaAgenda.innerHTML = gerarHorarios().map(h=>`<option>${h}</option>`).join("");
-  clienteAgenda.innerHTML = db.clientes.map(c=>`<option>${c.nome}</option>`).join("");
+  clienteAgenda.innerHTML = cliente.innerHTML;
   servicoAgenda.innerHTML = db.produtos.filter(p=>p.tipo==="servico")
     .map(p=>`<option>${p.nome}</option>`).join("");
 
@@ -208,35 +201,31 @@ function render(){
   renderAgenda();
 }
 
-// ===== AGENDA =====
-function renderAgenda(){
-  if(!dataAgenda.value) return;
-  listaAgenda.innerHTML = db.agenda
-    .filter(a=>a.data===dataAgenda.value)
-    .sort((a,b)=>a.hora.localeCompare(b.hora))
-    .map(a=>`<li>🕒 ${a.hora} | ${a.cliente} | ${a.servico}</li>`)
-    .join("");
-}
-
-function salvarAgendamento(){
-  const data=dataAgenda.value;
-  const hora=horaAgenda.value;
-
-  if(db.agenda.find(a=>a.data===data && a.hora===hora))
-    return alert("Horário já ocupado");
-
-  db.agenda.push({
-    data,
-    hora,
-    cliente:clienteAgenda.value,
-    servico:servicoAgenda.value
-  });
-
-  save();
-  renderAgenda();
-}
-
 // ===== PDV =====
+function addItem(){
+  if(!db.caixa.aberto) return alert("Abra o caixa");
+
+  const [nome,valor,tipo] = produto.value.split("|");
+  const cli = db.clientes.find(c=>c.nome===cliente.value);
+
+  if(
+    cli &&
+    cli.plano &&
+    tipo==="servico" &&
+    cli.saldo>0 &&
+    db.planos.find(p=>p.nome===cli.plano && p.tipo===nome)
+  ){
+    cli.saldo--;
+    alert("Plano utilizado. Saldo: "+cli.saldo);
+    save(); render();
+    return;
+  }
+
+  carrinho.push({nome,valor:Number(valor)});
+  carrinhoRender();
+}
+
+// ===== CARRINHO =====
 function carrinhoRender(){
   let html="<tr><th>Item</th><th>Valor</th></tr>";
   let soma=0;
@@ -248,29 +237,20 @@ function carrinhoRender(){
   total.innerText=soma.toFixed(2);
 }
 
-function abrirCaixa(){ db.caixa.aberto=true; save(); render(); }
-function fecharCaixa(){ db.caixa.aberto=false; save(); render(); }
-
-function addItem(){
-  if(!db.caixa.aberto) return alert("Abra o caixa");
-  const [nome,valor]=produto.value.split("|");
-  carrinho.push({nome,valor:Number(valor)});
-  carrinhoRender();
-}
-
 function finalizarVenda(){
   if(!carrinho.length) return;
   const totalVenda=carrinho.reduce((s,i)=>s+i.valor,0);
   db.vendas.push({
     data:new Date().toLocaleString(),
     cliente:cliente.value,
-    itens:[...carrinho],
     total:totalVenda
   });
   carrinho=[];
-  save();
-  render();
+  save(); render();
 }
+
+function abrirCaixa(){ db.caixa.aberto=true; save(); render(); }
+function fecharCaixa(){ db.caixa.aberto=false; save(); render(); }
 
 // ===== CADASTROS =====
 function salvarCliente(){
@@ -310,36 +290,35 @@ function salvarDespesa(){
   save(); render();
 }
 
+// ===== AGENDA =====
+function renderAgenda(){
+  if(!dataAgenda.value) return;
+  listaAgenda.innerHTML = db.agenda
+    .filter(a=>a.data===dataAgenda.value)
+    .sort((a,b)=>a.hora.localeCompare(b.hora))
+    .map(a=>`<li>${a.hora} | ${a.cliente} | ${a.servico}</li>`)
+    .join("");
+}
+
+function salvarAgendamento(){
+  if(db.agenda.find(a=>a.data===dataAgenda.value && a.hora===horaAgenda.value))
+    return alert("Horário ocupado");
+  db.agenda.push({
+    data:dataAgenda.value,
+    hora:horaAgenda.value,
+    cliente:clienteAgenda.value,
+    servico:servicoAgenda.value
+  });
+  save(); renderAgenda();
+}
+
 // ===== FINANCEIRO =====
 function financeiroRender(){
-  const faturamento=db.vendas.reduce((s,v)=>s+v.total,0);
-  const despesas=db.despesas.reduce((s,d)=>s+d.valor,0);
-  fat.innerText=faturamento.toFixed(2);
-  desp.innerText=despesas.toFixed(2);
-  lucro.innerText=(faturamento-despesas).toFixed(2);
-}
-
-// ===== PDF =====
-function pdfCaixa(){
-  const {jsPDF}=window.jspdf;
-  const pdf=new jsPDF();
-  let y=10;
-  pdf.text("RESUMO DO CAIXA",10,y); y+=10;
-  db.vendas.forEach(v=>{
-    pdf.text(`${v.data} | ${v.cliente} | R$ ${v.total.toFixed(2)}`,10,y);
-    y+=8;
-  });
-  pdf.save("caixa.pdf");
-}
-
-function pdfFinanceiro(){
-  const {jsPDF}=window.jspdf;
-  const pdf=new jsPDF();
-  pdf.text("RELATÓRIO FINANCEIRO",10,10);
-  pdf.text("Faturamento: R$ "+fat.innerText,10,30);
-  pdf.text("Despesas: R$ "+desp.innerText,10,40);
-  pdf.text("Lucro: R$ "+lucro.innerText,10,50);
-  pdf.save("financeiro.pdf");
+  const f=db.vendas.reduce((s,v)=>s+v.total,0);
+  const d=db.despesas.reduce((s,i)=>s+i.valor,0);
+  fat.innerText=f.toFixed(2);
+  desp.innerText=d.toFixed(2);
+  lucro.innerText=(f-d).toFixed(2);
 }
 
 render();
