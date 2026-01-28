@@ -4,33 +4,69 @@
 <meta charset="UTF-8">
 <title>PDV Barbearia</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<!-- jsPDF LOCAL -->
+<script src="jspdf.umd.min.js"></script>
 
 <style>
-body{margin:0;font-family:Arial;background:#111;color:#fff}
-.menu{position:fixed;left:0;top:0;bottom:0;width:70px;background:#0008;
-display:flex;flex-direction:column;align-items:center;padding-top:20px}
-.menu button{background:none;border:none;color:#f1c40f;font-size:22px;margin:15px 0;cursor:pointer}
-.content{margin-left:90px;padding:20px}
+body{
+  margin:0;
+  font-family:Arial,Helvetica,sans-serif;
+  background:url("https://images.unsplash.com/photo-1503951914875-452162b0f3f1");
+  background-size:cover;
+  background-position:center;
+}
+.overlay{
+  background:rgba(0,0,0,.7);
+  min-height:100vh;
+}
+.menu{
+  position:fixed;
+  left:0;top:0;bottom:0;
+  width:70px;
+  background:rgba(0,0,0,.4);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding-top:20px;
+}
+.menu button{
+  background:none;
+  border:none;
+  color:#f1c40f;
+  font-size:22px;
+  margin:15px 0;
+  cursor:pointer;
+}
+.content{
+  margin-left:90px;
+  padding:20px;
+  color:#fff;
+}
 .section{display:none}
 .section.active{display:block}
-input,select,button{padding:8px;border-radius:6px;border:none;margin:4px}
+input,select,button{
+  padding:8px;
+  border-radius:6px;
+  border:none;
+  margin:4px 0;
+}
 button{cursor:pointer;font-weight:bold}
 table{width:100%;border-collapse:collapse}
-th,td{border-bottom:1px solid #444;padding:6px}
+th,td{
+  border-bottom:1px solid rgba(255,255,255,.2);
+  padding:6px;
+}
 .total{font-size:20px;color:#2ecc71}
 .neg{color:#e74c3c}
 </style>
 </head>
 
 <body>
+<div class="overlay">
 
 <div class="menu">
   <button onclick="show('pdv')">💈</button>
-  <button onclick="show('agenda')">📅</button>
-  <button onclick="show('clientes')">👤</button>
-  <button onclick="show('planos')">💳</button>
-  <button onclick="show('produtos')">📦</button>
   <button onclick="show('despesas')">🧾</button>
   <button onclick="show('financeiro')">📊</button>
 </div>
@@ -42,12 +78,11 @@ th,td{border-bottom:1px solid #444;padding:6px}
   <h2>PDV / Caixa</h2>
   <p id="statusCaixa"></p>
 
-  <div>
-    <input id="valorAbertura" type="number" placeholder="Valor abertura do caixa">
-    <button onclick="abrirCaixa()">Abrir Caixa</button>
-  </div>
+  <input id="valorAbertura" type="number" placeholder="Valor de abertura do caixa">
+  <button onclick="abrirCaixa()">Abrir Caixa</button>
 
-  <select id="cliente"></select>
+  <hr>
+
   <select id="produto"></select>
 
   <select id="pagamento">
@@ -80,43 +115,97 @@ th,td{border-bottom:1px solid #444;padding:6px}
 <!-- FINANCEIRO -->
 <div id="financeiro" class="section">
   <h2>Financeiro</h2>
-  <p>Faturamento: R$ <span id="fat"></span></p>
-  <p>Despesas: R$ <span id="desp"></span></p>
-  <p class="total">Lucro: R$ <span id="lucro"></span></p>
+  <p>Vendas: R$ <span id="fat">0.00</span></p>
+  <p>Despesas: R$ <span id="desp">0.00</span></p>
+  <p class="total">Lucro: R$ <span id="lucro">0.00</span></p>
 </div>
 
+</div>
 </div>
 
 <script>
+/* ===== FUNÇÃO SHOW (CORRIGIDA) ===== */
+function show(id){
+  document.querySelectorAll(".section")
+    .forEach(s=>s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+
+/* ===== DB ===== */
 const rawDB = JSON.parse(localStorage.getItem("db")||"{}");
 const db = {
-  clientes: rawDB.clientes||[],
-  produtos: rawDB.produtos||[],
-  vendas: rawDB.vendas||[],
-  despesas: rawDB.despesas||[],
-  caixa: rawDB.caixa||{aberto:false, abertura:0}
+  produtos: rawDB.produtos || [
+    {nome:"Corte",valor:30},
+    {nome:"Barba",valor:20}
+  ],
+  vendas: rawDB.vendas || [],
+  despesas: rawDB.despesas || [],
+  caixa: rawDB.caixa || {aberto:false, abertura:0}
 };
 
 let carrinho=[];
 
-function save(){localStorage.setItem("db",JSON.stringify(db));}
+function save(){
+  localStorage.setItem("db",JSON.stringify(db));
+}
 
+/* ===== CAIXA ===== */
 function abrirCaixa(){
   db.caixa.aberto=true;
   db.caixa.abertura=Number(valorAbertura.value||0);
   db.vendas=[];
   db.despesas=[];
+  carrinho=[];
   save();
   render();
 }
 
+function fecharCaixa(){
+  const pix = db.vendas.filter(v=>v.pagamento==="pix")
+    .reduce((s,v)=>s+v.total,0);
+  const cartao = db.vendas.filter(v=>v.pagamento==="cartao")
+    .reduce((s,v)=>s+v.total,0);
+  const dinheiro = db.vendas.filter(v=>v.pagamento==="dinheiro")
+    .reduce((s,v)=>s+v.total,0);
+  const despesas = db.despesas.reduce((s,d)=>s+d.valor,0);
+  const vendasTotal = pix+cartao+dinheiro;
+  const saldo = db.caixa.abertura + vendasTotal - despesas;
+
+  db.caixa.aberto=false;
+
+  resumoCaixa.innerHTML=`
+    <h3>Resumo do Caixa</h3>
+    <p>Abertura: R$ ${db.caixa.abertura.toFixed(2)}</p>
+    <p>Pix: R$ ${pix.toFixed(2)}</p>
+    <p>Cartão: R$ ${cartao.toFixed(2)}</p>
+    <p>Dinheiro: R$ ${dinheiro.toFixed(2)}</p>
+    <p>Despesas: R$ ${despesas.toFixed(2)}</p>
+    <p class="total">Saldo Final: R$ ${saldo.toFixed(2)}</p>
+  `;
+  save();
+}
+
+/* ===== PDV ===== */
 function addItem(){
   const [nome,valor]=produto.value.split("|");
   carrinho.push({nome,valor:+valor});
-  carrinhoRender();
+  renderCarrinho();
 }
 
-function carrinhoRender(){
+function finalizarVenda(){
+  if(!carrinho.length) return;
+  const total=carrinho.reduce((s,i)=>s+i.valor,0);
+  db.vendas.push({
+    data:new Date().toLocaleString(),
+    total,
+    pagamento:pagamento.value
+  });
+  carrinho=[];
+  save();
+  render();
+}
+
+function renderCarrinho(){
   let html="<tr><th>Item</th><th>Valor</th></tr>";
   let soma=0;
   carrinho.forEach(i=>{
@@ -127,46 +216,17 @@ function carrinhoRender(){
   total.innerText=soma.toFixed(2);
 }
 
-function finalizarVenda(){
-  const totalVenda=carrinho.reduce((s,i)=>s+i.valor,0);
-  db.vendas.push({
-    data:new Date().toLocaleString(),
-    itens:[...carrinho],
-    total:totalVenda,
-    pagamento:pagamento.value
-  });
-  carrinho=[];
-  save(); render();
-}
-
-function fecharCaixa(){
-  const totPix=db.vendas.filter(v=>v.pagamento==="pix").reduce((s,v)=>s+v.total,0);
-  const totCartao=db.vendas.filter(v=>v.pagamento==="cartao").reduce((s,v)=>s+v.total,0);
-  const totDin=db.vendas.filter(v=>v.pagamento==="dinheiro").reduce((s,v)=>s+v.total,0);
-  const despesas=db.despesas.reduce((s,d)=>s+d.valor,0);
-  const vendasTotal=totPix+totCartao+totDin;
-  const saldo=db.caixa.abertura+vendasTotal-despesas;
-
-  db.caixa.aberto=false;
-
-  resumoCaixa.innerHTML=`
-    <h3>Resumo do Caixa</h3>
-    <p>Abertura: R$ ${db.caixa.abertura.toFixed(2)}</p>
-    <p>Pix: R$ ${totPix.toFixed(2)}</p>
-    <p>Cartão: R$ ${totCartao.toFixed(2)}</p>
-    <p>Dinheiro: R$ ${totDin.toFixed(2)}</p>
-    <p>Despesas: R$ ${despesas.toFixed(2)}</p>
-    <p class="total">Saldo Final: R$ ${saldo.toFixed(2)}</p>
-  `;
-
-  save();
-}
-
+/* ===== DESPESAS ===== */
 function salvarDespesa(){
+  if(!descDespesa.value || !valorDespesa.value) return;
   db.despesas.push({desc:descDespesa.value,valor:+valorDespesa.value});
-  save(); render();
+  descDespesa.value="";
+  valorDespesa.value="";
+  save();
+  render();
 }
 
+/* ===== PDF ===== */
 function pdfFechamento(){
   const {jsPDF}=window.jspdf;
   const pdf=new jsPDF();
@@ -184,9 +244,23 @@ function pdfFechamento(){
   pdf.save("fechamento-caixa.pdf");
 }
 
+/* ===== RENDER ===== */
 function render(){
   statusCaixa.innerText=db.caixa.aberto?"🟢 Caixa aberto":"🔴 Caixa fechado";
-  carrinhoRender();
+  produto.innerHTML=db.produtos
+    .map(p=>`<option value="${p.nome}|${p.valor}">${p.nome} - R$ ${p.valor}</option>`).join("");
+  listaDespesas.innerHTML=db.despesas
+    .map(d=>`<li>${d.desc} - R$ ${d.valor.toFixed(2)}</li>`).join("");
+
+  const vendas=db.vendas.reduce((s,v)=>s+v.total,0);
+  const desp=db.despesas.reduce((s,d)=>s+d.valor,0);
+  fat.innerText=vendas.toFixed(2);
+  despSpan=desp;
+  despElem=document.getElementById("desp");
+  despElem.innerText=desp.toFixed(2);
+  lucro.innerText=(vendas-desp).toFixed(2);
+
+  renderCarrinho();
 }
 
 render();
