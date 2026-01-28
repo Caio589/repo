@@ -8,15 +8,17 @@
 
 <style>
 body{margin:0;font-family:Arial;background:#111;color:#fff}
-.menu{position:fixed;left:0;top:0;bottom:0;width:70px;background:#0008;display:flex;flex-direction:column;align-items:center;padding-top:20px}
+.menu{position:fixed;left:0;top:0;bottom:0;width:70px;background:#0008;
+display:flex;flex-direction:column;align-items:center;padding-top:20px}
 .menu button{background:none;border:none;color:#f1c40f;font-size:22px;margin:15px 0;cursor:pointer}
 .content{margin-left:90px;padding:20px}
 .section{display:none}
 .section.active{display:block}
 input,select,button{padding:8px;border-radius:6px;border:none;margin:4px}
 button{cursor:pointer;font-weight:bold}
-ul li{margin:6px 0}
-.small{font-size:12px;color:#aaa}
+table{width:100%;border-collapse:collapse}
+th,td{border-bottom:1px solid #444;padding:6px}
+.total{font-size:20px;color:#2ecc71}
 </style>
 </head>
 
@@ -28,12 +30,38 @@ ul li{margin:6px 0}
   <button onclick="show('clientes')">👤</button>
   <button onclick="show('planos')">💳</button>
   <button onclick="show('produtos')">📦</button>
+  <button onclick="show('financeiro')">📊</button>
 </div>
 
 <div class="content">
 
+<!-- PDV -->
+<div id="pdv" class="section active">
+  <h2>PDV / Caixa</h2>
+  <p id="statusCaixa"></p>
+  <select id="cliente"></select>
+  <select id="produto"></select>
+  <button onclick="addItem()">Adicionar</button>
+  <table id="carrinho"></table>
+  <p class="total">Total: R$ <span id="total">0.00</span></p>
+  <button onclick="finalizarVenda()">Finalizar Venda</button>
+  <button onclick="abrirCaixa()">Abrir Caixa</button>
+  <button onclick="fecharCaixa()">Fechar Caixa</button>
+</div>
+
+<!-- AGENDA -->
+<div id="agenda" class="section">
+  <h2>Agenda</h2>
+  <input type="date" id="dataAgenda">
+  <select id="horaAgenda"></select>
+  <select id="clienteAgenda"></select>
+  <select id="servicoAgenda"></select>
+  <button onclick="salvarAgendamento()">Agendar</button>
+  <ul id="listaAgenda"></ul>
+</div>
+
 <!-- CLIENTES -->
-<div id="clientes" class="section active">
+<div id="clientes" class="section">
   <h2>Clientes</h2>
   <input id="nomeCliente" placeholder="Nome">
   <select id="planoCliente"></select>
@@ -52,7 +80,7 @@ ul li{margin:6px 0}
   <ul id="listaPlanos"></ul>
 </div>
 
-<!-- PRODUTOS / SERVIÇOS -->
+<!-- PRODUTOS -->
 <div id="produtos" class="section">
   <h2>Produtos / Serviços</h2>
   <input id="nomeProd" placeholder="Nome">
@@ -65,56 +93,138 @@ ul li{margin:6px 0}
   <ul id="listaProdutos"></ul>
 </div>
 
+<!-- FINANCEIRO -->
+<div id="financeiro" class="section">
+  <h2>Financeiro</h2>
+  <p>Faturamento: R$ <span id="fat">0.00</span></p>
+  <p>Despesas: R$ <span id="desp">0.00</span></p>
+  <p class="total">Lucro: R$ <span id="lucro">0.00</span></p>
+</div>
+
 </div>
 
 <script>
-const raw = JSON.parse(localStorage.getItem("db")||"{}");
+// ===== DB =====
+const rawDB = JSON.parse(localStorage.getItem("db")||"{}");
 const db = {
-  clientes: raw.clientes||[],
-  planos: raw.planos||[],
-  produtos: raw.produtos||[]
+  clientes: rawDB.clientes||[],
+  planos: rawDB.planos||[],
+  produtos: rawDB.produtos||[],
+  vendas: rawDB.vendas||[],
+  despesas: rawDB.despesas||[],
+  agenda: rawDB.agenda||[],
+  caixa: rawDB.caixa||{aberto:false}
 };
 
+let carrinho=[];
 let editCliente=null, editPlano=null, editProduto=null;
 
-function save(){localStorage.setItem("db",JSON.stringify(db))}
+function save(){localStorage.setItem("db",JSON.stringify(db));}
+
 function show(id){
   document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
   document.getElementById(id).classList.add("active");
   render();
 }
 
+// ===== HORÁRIOS =====
+function gerarHorarios(){
+  let h=[];
+  for(let i=8;i<=20;i++){
+    h.push(`${String(i).padStart(2,"0")}:00`);
+    h.push(`${String(i).padStart(2,"0")}:30`);
+  }
+  return h;
+}
+
+// ===== RENDER =====
 function render(){
-  planoCliente.innerHTML = `<option value="">Sem plano</option>`+
+  statusCaixa.innerText=db.caixa.aberto?"🟢 Caixa aberto":"🔴 Caixa fechado";
+
+  cliente.innerHTML=db.clientes.map(c=>`<option>${c.nome}</option>`).join("");
+  produto.innerHTML=db.produtos.map(p=>`<option>${p.nome}|${p.valor}|${p.tipo}</option>`).join("");
+
+  planoCliente.innerHTML=`<option value="">Sem plano</option>`+
     db.planos.map(p=>`<option>${p.nome}</option>`).join("");
 
-  tipoPlano.innerHTML = db.produtos.filter(p=>p.tipo==="servico")
+  tipoPlano.innerHTML=db.produtos.filter(p=>p.tipo==="servico")
     .map(p=>`<option>${p.nome}</option>`).join("");
 
-  listaClientes.innerHTML = db.clientes.map((c,i)=>`
-    <li>${c.nome} | Plano: ${c.plano||"-"}
+  listaClientes.innerHTML=db.clientes.map((c,i)=>`
+    <li>${c.nome} | Plano: ${c.plano||"-"} | Saldo: ${c.saldo||0}
       <button onclick="editarCliente(${i})">✏️</button>
       <button onclick="excluirCliente(${i})">🗑️</button>
     </li>`).join("");
 
-  listaPlanos.innerHTML = db.planos.map((p,i)=>`
+  listaPlanos.innerHTML=db.planos.map((p,i)=>`
     <li>${p.nome} (${p.qtd}x ${p.tipo})
       <button onclick="editarPlano(${i})">✏️</button>
       <button onclick="excluirPlano(${i})">🗑️</button>
     </li>`).join("");
 
-  listaProdutos.innerHTML = db.produtos.map((p,i)=>`
+  listaProdutos.innerHTML=db.produtos.map((p,i)=>`
     <li>${p.nome} (${p.tipo})
       <button onclick="editarProduto(${i})">✏️</button>
       <button onclick="excluirProduto(${i})">🗑️</button>
     </li>`).join("");
+
+  horaAgenda.innerHTML=gerarHorarios().map(h=>`<option>${h}</option>`).join("");
+  clienteAgenda.innerHTML=cliente.innerHTML;
+  servicoAgenda.innerHTML=db.produtos.filter(p=>p.tipo==="servico")
+    .map(p=>`<option>${p.nome}</option>`).join("");
+
+  carrinhoRender();
+  financeiroRender();
+  renderAgenda();
 }
 
-/* ===== CLIENTES ===== */
+// ===== PDV =====
+function addItem(){
+  if(!db.caixa.aberto) return alert("Abra o caixa");
+
+  const [nome,valor,tipo]=produto.value.split("|");
+  const cli=db.clientes.find(c=>c.nome===cliente.value);
+
+  if(cli && cli.plano && tipo==="servico" &&
+     !db.planos.find(p=>p.nome===cli.plano && p.tipo===nome))
+    return alert("Serviço não permitido no plano");
+
+  if(cli && cli.plano && tipo==="servico" && cli.saldo>0 &&
+     db.planos.find(p=>p.nome===cli.plano && p.tipo===nome)){
+    cli.saldo--;
+    save(); render();
+    return alert("Plano usado. Saldo: "+cli.saldo);
+  }
+
+  carrinho.push({nome,valor:+valor});
+  carrinhoRender();
+}
+
+function carrinhoRender(){
+  let html="<tr><th>Item</th><th>Valor</th></tr>", soma=0;
+  carrinho.forEach(i=>{
+    html+=`<tr><td>${i.nome}</td><td>R$ ${i.valor.toFixed(2)}</td></tr>`;
+    soma+=i.valor;
+  });
+  carrinho.innerHTML=html;
+  total.innerText=soma.toFixed(2);
+}
+
+function finalizarVenda(){
+  if(!carrinho.length) return;
+  const t=carrinho.reduce((s,i)=>s+i.valor,0);
+  db.vendas.push({data:new Date().toLocaleString(),cliente:cliente.value,total:t});
+  carrinho=[]; save(); render();
+}
+
+function abrirCaixa(){db.caixa.aberto=true;save();render();}
+function fecharCaixa(){db.caixa.aberto=false;save();render();}
+
+// ===== CRUD =====
 function salvarCliente(){
-  const obj={nome:nomeCliente.value,plano:planoCliente.value||null}
-  if(editCliente!==null) db.clientes[editCliente]=obj;
-  else db.clientes.push(obj);
+  const p=db.planos.find(pl=>pl.nome===planoCliente.value);
+  const obj={nome:nomeCliente.value,plano:p?p.nome:null,saldo:p?p.qtd:0};
+  editCliente!==null?db.clientes[editCliente]=obj:db.clientes.push(obj);
   editCliente=null; nomeCliente.value="";
   save(); render();
 }
@@ -129,16 +239,9 @@ function excluirCliente(i){
   }
 }
 
-/* ===== PLANOS ===== */
 function salvarPlano(){
-  const obj={
-    nome:nomePlano.value,
-    valor:+valorPlano.value,
-    qtd:+qtdPlano.value,
-    tipo:tipoPlano.value
-  };
-  if(editPlano!==null) db.planos[editPlano]=obj;
-  else db.planos.push(obj);
+  const obj={nome:nomePlano.value,valor:+valorPlano.value,qtd:+qtdPlano.value,tipo:tipoPlano.value};
+  editPlano!==null?db.planos[editPlano]=obj:db.planos.push(obj);
   editPlano=null; nomePlano.value="";
   save(); render();
 }
@@ -154,28 +257,50 @@ function excluirPlano(i){
   }
 }
 
-/* ===== PRODUTOS ===== */
 function salvarProduto(){
-  const obj={
-    nome:nomeProd.value,
-    valor:+valorProd.value,
-    tipo:tipoProd.value
-  };
-  if(editProduto!==null) db.produtos[editProduto]=obj;
-  else db.produtos.push(obj);
+  const obj={nome:nomeProd.value,valor:+valorProd.value,tipo:tipoProd.value};
+  editProduto!==null?db.produtos[editProduto]=obj:db.produtos.push(obj);
   editProduto=null; nomeProd.value="";
   save(); render();
 }
 function editarProduto(i){
   const p=db.produtos[i];
-  nomeProd.value=p.nome; valorProd.value=p.valor;
-  tipoProd.value=p.tipo;
+  nomeProd.value=p.nome; valorProd.value=p.valor; tipoProd.value=p.tipo;
   editProduto=i;
 }
 function excluirProduto(i){
   if(confirm("Excluir item?")){
     db.produtos.splice(i,1); save(); render();
   }
+}
+
+// ===== AGENDA =====
+function renderAgenda(){
+  if(!dataAgenda.value) return;
+  listaAgenda.innerHTML=db.agenda
+    .filter(a=>a.data===dataAgenda.value)
+    .sort((a,b)=>a.hora.localeCompare(b.hora))
+    .map(a=>`<li>${a.hora} | ${a.cliente} | ${a.servico}</li>`).join("");
+}
+function salvarAgendamento(){
+  if(db.agenda.find(a=>a.data===dataAgenda.value && a.hora===horaAgenda.value))
+    return alert("Horário ocupado");
+  db.agenda.push({
+    data:dataAgenda.value,
+    hora:horaAgenda.value,
+    cliente:clienteAgenda.value,
+    servico:servicoAgenda.value
+  });
+  save(); renderAgenda();
+}
+
+// ===== FINANCEIRO =====
+function financeiroRender(){
+  const f=db.vendas.reduce((s,v)=>s+v.total,0);
+  const d=db.despesas.reduce((s,i)=>s+i.valor,0);
+  fat.innerText=f.toFixed(2);
+  desp.innerText=d.toFixed(2);
+  lucro.innerText=(f-d).toFixed(2);
 }
 
 render();
