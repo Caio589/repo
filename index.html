@@ -41,6 +41,7 @@ th,td{border-bottom:1px solid rgba(255,255,255,.2);padding:6px}
 
 <div class="menu">
   <button onclick="show('pdv')">💈</button>
+  <button onclick="show('agenda')">📅</button>
   <button onclick="show('clientes')">👤</button>
   <button onclick="show('planos')">💳</button>
   <button onclick="show('produtos')">📦</button>
@@ -68,6 +69,21 @@ th,td{border-bottom:1px solid rgba(255,255,255,.2);padding:6px}
   <button onclick="pdfCaixa()">📄 PDF Caixa</button>
 </div>
 
+<!-- AGENDA -->
+<div id="agenda" class="section">
+  <h2>Agendamento (30 em 30 min)</h2>
+
+  <input type="date" id="dataAgenda">
+  <select id="horaAgenda"></select>
+  <select id="clienteAgenda"></select>
+  <select id="servicoAgenda"></select>
+
+  <button onclick="salvarAgendamento()">Agendar</button>
+
+  <h3>Agenda do dia</h3>
+  <ul id="listaAgenda"></ul>
+</div>
+
 <!-- CLIENTES -->
 <div id="clientes" class="section">
   <h2>Clientes</h2>
@@ -81,9 +97,9 @@ th,td{border-bottom:1px solid rgba(255,255,255,.2);padding:6px}
 <div id="planos" class="section">
   <h2>Planos</h2>
   <input id="nomePlano" placeholder="Nome do plano">
-  <input id="valorPlano" type="number" placeholder="Valor do plano">
-  <input id="qtdPlano" type="number" placeholder="Qtd procedimentos">
-  <input id="tipoPlano" placeholder="Tipo serviço (ex: corte)">
+  <input id="valorPlano" type="number" placeholder="Valor">
+  <input id="qtdPlano" type="number" placeholder="Qtd serviços">
+  <input id="tipoPlano" placeholder="Tipo (ex: corte)">
   <button onclick="salvarPlano()">Salvar Plano</button>
   <ul id="listaPlanos"></ul>
 </div>
@@ -113,9 +129,9 @@ th,td{border-bottom:1px solid rgba(255,255,255,.2);padding:6px}
 <!-- FINANCEIRO -->
 <div id="financeiro" class="section">
   <h2>Financeiro</h2>
-  <p>Faturamento: R$ <span id="fat"></span></p>
-  <p>Despesas: R$ <span id="desp"></span></p>
-  <p class="total">Lucro: R$ <span id="lucro"></span></p>
+  <p>Faturamento: R$ <span id="fat">0.00</span></p>
+  <p>Despesas: R$ <span id="desp">0.00</span></p>
+  <p class="total">Lucro: R$ <span id="lucro">0.00</span></p>
   <button onclick="pdfFinanceiro()">📊 PDF Financeiro</button>
 </div>
 
@@ -123,14 +139,15 @@ th,td{border-bottom:1px solid rgba(255,255,255,.2);padding:6px}
 </div>
 
 <script>
-// ===== DB SEGURO =====
+// ===== DB =====
 const rawDB = JSON.parse(localStorage.getItem("db") || "{}");
 const db = {
-  clientes: Array.isArray(rawDB.clientes) ? rawDB.clientes : [],
-  planos: Array.isArray(rawDB.planos) ? rawDB.planos : [],
-  produtos: Array.isArray(rawDB.produtos) ? rawDB.produtos : [],
-  vendas: Array.isArray(rawDB.vendas) ? rawDB.vendas : [],
-  despesas: Array.isArray(rawDB.despesas) ? rawDB.despesas : [],
+  clientes: rawDB.clientes || [],
+  planos: rawDB.planos || [],
+  produtos: rawDB.produtos || [],
+  vendas: rawDB.vendas || [],
+  despesas: rawDB.despesas || [],
+  agenda: rawDB.agenda || [],
   caixa: rawDB.caixa || { aberto:false }
 };
 
@@ -142,6 +159,16 @@ function show(id){
   document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
   document.getElementById(id).classList.add("active");
   render();
+}
+
+// ===== HORÁRIOS =====
+function gerarHorarios(){
+  let h=[];
+  for(let hora=8;hora<=20;hora++){
+    h.push(`${hora.toString().padStart(2,"0")}:00`);
+    h.push(`${hora.toString().padStart(2,"0")}:30`);
+  }
+  return h;
 }
 
 // ===== RENDER =====
@@ -160,7 +187,7 @@ function render(){
   ).join("");
 
   listaPlanos.innerHTML = db.planos.map(p =>
-    `<li>${p.nome} - R$ ${p.valor} (${p.qtd}x ${p.tipo})</li>`
+    `<li>${p.nome} - R$ ${p.valor}</li>`
   ).join("");
 
   listaProdutos.innerHTML = db.produtos.map(p =>
@@ -171,11 +198,45 @@ function render(){
     `<li>${d.desc} - R$ ${d.valor}</li>`
   ).join("");
 
+  horaAgenda.innerHTML = gerarHorarios().map(h=>`<option>${h}</option>`).join("");
+  clienteAgenda.innerHTML = db.clientes.map(c=>`<option>${c.nome}</option>`).join("");
+  servicoAgenda.innerHTML = db.produtos.filter(p=>p.tipo==="servico")
+    .map(p=>`<option>${p.nome}</option>`).join("");
+
   carrinhoRender();
   financeiroRender();
+  renderAgenda();
 }
 
-// ===== CARRINHO =====
+// ===== AGENDA =====
+function renderAgenda(){
+  if(!dataAgenda.value) return;
+  listaAgenda.innerHTML = db.agenda
+    .filter(a=>a.data===dataAgenda.value)
+    .sort((a,b)=>a.hora.localeCompare(b.hora))
+    .map(a=>`<li>🕒 ${a.hora} | ${a.cliente} | ${a.servico}</li>`)
+    .join("");
+}
+
+function salvarAgendamento(){
+  const data=dataAgenda.value;
+  const hora=horaAgenda.value;
+
+  if(db.agenda.find(a=>a.data===data && a.hora===hora))
+    return alert("Horário já ocupado");
+
+  db.agenda.push({
+    data,
+    hora,
+    cliente:clienteAgenda.value,
+    servico:servicoAgenda.value
+  });
+
+  save();
+  renderAgenda();
+}
+
+// ===== PDV =====
 function carrinhoRender(){
   let html="<tr><th>Item</th><th>Valor</th></tr>";
   let soma=0;
@@ -187,41 +248,25 @@ function carrinhoRender(){
   total.innerText=soma.toFixed(2);
 }
 
-// ===== CAIXA =====
 function abrirCaixa(){ db.caixa.aberto=true; save(); render(); }
 function fecharCaixa(){ db.caixa.aberto=false; save(); render(); }
 
-// ===== PDV =====
 function addItem(){
   if(!db.caixa.aberto) return alert("Abra o caixa");
-
-  const [nome,valor,tipo] = produto.value.split("|");
-  const cli = db.clientes.find(c=>c.nome===cliente.value);
-
-  if(cli && cli.plano && tipo==="servico" && cli.saldo>0){
-    cli.saldo--;
-    save();
-    alert("Plano usado. Saldo: "+cli.saldo);
-    render();
-    return;
-  }
-
+  const [nome,valor]=produto.value.split("|");
   carrinho.push({nome,valor:Number(valor)});
   carrinhoRender();
 }
 
 function finalizarVenda(){
-  if(carrinho.length===0) return;
-
-  const totalVenda = carrinho.reduce((s,i)=>s+i.valor,0);
-
+  if(!carrinho.length) return;
+  const totalVenda=carrinho.reduce((s,i)=>s+i.valor,0);
   db.vendas.push({
-    data: new Date().toLocaleString(),
-    cliente: cliente.value,
-    itens: [...carrinho],
-    total: totalVenda
+    data:new Date().toLocaleString(),
+    cliente:cliente.value,
+    itens:[...carrinho],
+    total:totalVenda
   });
-
   carrinho=[];
   save();
   render();
@@ -229,24 +274,13 @@ function finalizarVenda(){
 
 // ===== CADASTROS =====
 function salvarCliente(){
-  const plano = db.planos.find(p=>p.nome===planoCliente.value);
+  const plano=db.planos.find(p=>p.nome===planoCliente.value);
   db.clientes.push({
     nome:nomeCliente.value,
     plano:plano?plano.nome:null,
     saldo:plano?plano.qtd:0
   });
-
-  if(plano){
-    db.vendas.push({
-      data:new Date().toLocaleString(),
-      cliente:nomeCliente.value,
-      itens:[{nome:"Plano "+plano.nome, valor:plano.valor}],
-      total:plano.valor
-    });
-  }
-
-  save();
-  render();
+  save(); render();
 }
 
 function salvarPlano(){
@@ -254,10 +288,9 @@ function salvarPlano(){
     nome:nomePlano.value,
     valor:Number(valorPlano.value),
     qtd:Number(qtdPlano.value),
-    tipo:tipoPlano.value.toLowerCase()
+    tipo:tipoPlano.value
   });
-  save();
-  render();
+  save(); render();
 }
 
 function salvarProduto(){
@@ -266,8 +299,7 @@ function salvarProduto(){
     valor:Number(valorProd.value),
     tipo:tipoProd.value
   });
-  save();
-  render();
+  save(); render();
 }
 
 function salvarDespesa(){
@@ -275,66 +307,39 @@ function salvarDespesa(){
     desc:descDespesa.value,
     valor:Number(valorDespesa.value)
   });
-  save();
-  render();
+  save(); render();
 }
 
 // ===== FINANCEIRO =====
 function financeiroRender(){
-  const faturamento = db.vendas.reduce((s,v)=>s+v.total,0);
-  const despesas = db.despesas.reduce((s,d)=>s+d.valor,0);
+  const faturamento=db.vendas.reduce((s,v)=>s+v.total,0);
+  const despesas=db.despesas.reduce((s,d)=>s+d.valor,0);
   fat.innerText=faturamento.toFixed(2);
   desp.innerText=despesas.toFixed(2);
   lucro.innerText=(faturamento-despesas).toFixed(2);
 }
 
-// ===== PDF CAIXA =====
+// ===== PDF =====
 function pdfCaixa(){
-  const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF();
-
-  let y = 10;
-  pdf.text("RESUMO DO CAIXA", 10, y); 
-  y += 10;
-
-  pdf.text("Data: " + new Date().toLocaleString(), 10, y);
-  y += 10;
-
-  db.vendas.forEach(v => {
-    const valor = Number(v.total) || 0;   // 🔒 blindagem
-    const clienteVenda = v.cliente || "—";
-    const dataVenda = v.data || "";
-
-    pdf.text(
-      `• ${dataVenda} | ${clienteVenda} | R$ ${valor.toFixed(2)}`,
-      10,
-      y
-    );
-
-    y += 8;
-    if(y > 270){
-      pdf.addPage();
-      y = 10;
-    }
+  const {jsPDF}=window.jspdf;
+  const pdf=new jsPDF();
+  let y=10;
+  pdf.text("RESUMO DO CAIXA",10,y); y+=10;
+  db.vendas.forEach(v=>{
+    pdf.text(`${v.data} | ${v.cliente} | R$ ${v.total.toFixed(2)}`,10,y);
+    y+=8;
   });
-
-  pdf.save("resumo-caixa.pdf");
+  pdf.save("caixa.pdf");
 }
 
-// ===== PDF FINANCEIRO =====
 function pdfFinanceiro(){
-  const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF();
-
-  const faturamento=db.vendas.reduce((s,v)=>s+v.total,0);
-  const despesas=db.despesas.reduce((s,d)=>s+d.valor,0);
-
+  const {jsPDF}=window.jspdf;
+  const pdf=new jsPDF();
   pdf.text("RELATÓRIO FINANCEIRO",10,10);
-  pdf.text("Faturamento: R$ "+faturamento.toFixed(2),10,30);
-  pdf.text("Despesas: R$ "+despesas.toFixed(2),10,40);
-  pdf.text("Lucro: R$ "+(faturamento-despesas).toFixed(2),10,50);
-
-  pdf.save("relatorio-financeiro.pdf");
+  pdf.text("Faturamento: R$ "+fat.innerText,10,30);
+  pdf.text("Despesas: R$ "+desp.innerText,10,40);
+  pdf.text("Lucro: R$ "+lucro.innerText,10,50);
+  pdf.save("financeiro.pdf");
 }
 
 render();
