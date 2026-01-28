@@ -8,11 +8,9 @@
 
 <style>
 body{
-  margin:0;
-  font-family:Arial;
+  margin:0;font-family:Arial;
   background:url("https://images.unsplash.com/photo-1503951914875-452162b0f3f1");
-  background-size:cover;
-  background-position:center;
+  background-size:cover;background-position:center
 }
 .overlay{background:rgba(0,0,0,.75);min-height:100vh}
 .menu{
@@ -20,17 +18,21 @@ body{
   background:rgba(0,0,0,.4);
   display:flex;flex-direction:column;align-items:center;padding-top:20px
 }
-.menu button{background:none;border:none;color:#f1c40f;font-size:22px;margin:15px 0;cursor:pointer}
+.menu button{
+  background:none;border:none;color:#f1c40f;
+  font-size:22px;margin:15px 0;cursor:pointer
+}
 .content{margin-left:90px;padding:20px;color:#fff}
-.section{display:none}
-.section.active{display:block}
-input,select,button{padding:8px;border-radius:6px;border:none;margin:4px 0}
+.section{display:none}.section.active{display:block}
+input,select,button{
+  padding:8px;border-radius:6px;border:none;margin:4px 0
+}
 button{cursor:pointer;font-weight:bold}
 table{width:100%;border-collapse:collapse}
 th,td{border-bottom:1px solid rgba(255,255,255,.2);padding:6px}
 .total{font-size:20px;color:#2ecc71}
 .neg{color:#e74c3c}
-canvas{background:#111;border-radius:8px;margin-top:10px}
+canvas{background:#111;border-radius:8px}
 </style>
 </head>
 
@@ -54,8 +56,10 @@ canvas{background:#111;border-radius:8px;margin-top:10px}
   <h2>PDV / Caixa</h2>
   <p id="statusCaixa"></p>
 
-  <input id="valorAbertura" type="number" placeholder="Valor abertura do caixa">
+  <input id="valorAbertura" type="number" placeholder="Valor de abertura">
   <button onclick="abrirCaixa()">Abrir Caixa</button>
+
+  <hr>
 
   <select id="cliente"></select>
   <select id="produto"></select>
@@ -79,7 +83,7 @@ canvas{background:#111;border-radius:8px;margin-top:10px}
 
 <!-- AGENDA -->
 <div id="agenda" class="section">
-  <h2>Agenda (15 em 15 min)</h2>
+  <h2>Agenda 15 em 15</h2>
   <input type="date" id="dataAgenda">
   <select id="horaAgenda"></select>
   <select id="clienteAgenda"></select>
@@ -126,7 +130,7 @@ canvas{background:#111;border-radius:8px;margin-top:10px}
   <h2>Despesas</h2>
   <input id="descDespesa" placeholder="Descrição">
   <input id="valorDespesa" type="number" placeholder="Valor">
-  <button onclick="salvarDespesa()">Adicionar</button>
+  <button onclick="salvarDespesa()">Salvar</button>
   <ul id="listaDespesas"></ul>
 </div>
 
@@ -136,7 +140,6 @@ canvas{background:#111;border-radius:8px;margin-top:10px}
   <input type="month" id="mesRelatorio">
   <button onclick="gerarRelatorioMensal()">Gerar</button>
   <button onclick="pdfRelatorioMensal()">📄 PDF</button>
-
   <div id="resumoMensal"></div>
   <canvas id="graficoMensal" width="360" height="200"></canvas>
   <ul id="listaMensal"></ul>
@@ -146,13 +149,12 @@ canvas{background:#111;border-radius:8px;margin-top:10px}
 </div>
 
 <script>
-/* ========= FUNÇÃO SHOW ========= */
+/* ================= BASE ================= */
 function show(id){
   document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
   document.getElementById(id).classList.add("active");
 }
 
-/* ========= DB ========= */
 const rawDB = JSON.parse(localStorage.getItem("db")||"{}");
 const db = {
   clientes: rawDB.clientes||[],
@@ -165,16 +167,13 @@ const db = {
 };
 
 let carrinho=[];
+let editCliente=null,editPlano=null,editProduto=null,editDespesa=null;
 function save(){localStorage.setItem("db",JSON.stringify(db));}
 
-/* ========= AGENDA 15/15 ========= */
+/* ================= AGENDA ================= */
 function gerarHorarios15(){
   let h=[];
-  for(let i=8;i<=20;i++){
-    ["00","15","30","45"].forEach(m=>{
-      h.push(`${String(i).padStart(2,"0")}:${m}`);
-    });
-  }
+  for(let i=8;i<=20;i++)["00","15","30","45"].forEach(m=>h.push(`${String(i).padStart(2,"0")}:${m}`));
   return h;
 }
 function salvarAgendamento(){
@@ -194,7 +193,7 @@ function renderAgenda(){
     .map(a=>`<li>${a.hora} | ${a.cliente} | ${a.servico}</li>`).join("");
 }
 
-/* ========= CAIXA ========= */
+/* ================= CAIXA ================= */
 function abrirCaixa(){
   db.caixa.aberto=true;
   db.caixa.abertura=+valorAbertura.value||0;
@@ -202,15 +201,31 @@ function abrirCaixa(){
   save();render();
 }
 function fecharCaixa(){
-  const total=db.vendas.reduce((s,v)=>s+v.total,0);
+  let pix=0,cartao=0,dinheiro=0;
+  db.vendas.forEach(v=>{
+    if(v.pagamento==="pix")pix+=v.total;
+    if(v.pagamento==="cartao")cartao+=v.total;
+    if(v.pagamento==="dinheiro")dinheiro+=v.total;
+  });
   const desp=db.despesas.reduce((s,d)=>s+d.valor,0);
-  const saldo=db.caixa.abertura+total-desp;
-  resumoCaixa.innerHTML=`<p>Saldo Final: R$ ${saldo.toFixed(2)}</p>`;
+  const saldo=db.caixa.abertura+pix+cartao+dinheiro-desp;
+
+  resumoCaixa.innerHTML=`
+    <h3>Fechamento do Caixa</h3>
+    <p>Abertura: R$ ${db.caixa.abertura.toFixed(2)}</p>
+    <p>Pix: R$ ${pix.toFixed(2)}</p>
+    <p>Cartão: R$ ${cartao.toFixed(2)}</p>
+    <p>Dinheiro: R$ ${dinheiro.toFixed(2)}</p>
+    <p>Despesas: R$ ${desp.toFixed(2)}</p>
+    <p class="total">Saldo Final: R$ ${saldo.toFixed(2)}</p>
+    <h4>Vendas:</h4>
+    ${db.vendas.map(v=>`<p>${v.data} | ${v.cliente} | ${v.pagamento} | R$ ${v.total.toFixed(2)}</p>`).join("")}
+  `;
   db.caixa.aberto=false;
   save();render();
 }
 
-/* ========= PDV ========= */
+/* ================= PDV ================= */
 function addItem(){
   const [nome,valor]=produto.value.split("|");
   carrinho.push({nome,valor:+valor});
@@ -218,7 +233,12 @@ function addItem(){
 }
 function finalizarVenda(){
   const total=carrinho.reduce((s,i)=>s+i.valor,0);
-  db.vendas.push({data:new Date().toLocaleString(),total,pagamento:pagamento.value});
+  db.vendas.push({
+    data:new Date().toLocaleString(),
+    cliente:cliente.value,
+    pagamento:pagamento.value,
+    total
+  });
   carrinho=[];save();render();
 }
 function renderCarrinho(){
@@ -227,13 +247,30 @@ function renderCarrinho(){
   carrinho.innerHTML=h;total.innerText=s.toFixed(2);
 }
 
-/* ========= CRUD ========= */
-function salvarCliente(){db.clientes.push({nome:nomeCliente.value});save();render();}
-function salvarPlano(){db.planos.push({nome:nomePlano.value,valor:+valorPlano.value,qtd:+qtdPlano.value,tipo:tipoPlano.value});save();render();}
-function salvarProduto(){db.produtos.push({nome:nomeProd.value,valor:+valorProd.value,tipo:tipoProd.value});save();render();}
-function salvarDespesa(){db.despesas.push({desc:descDespesa.value,valor:+valorDespesa.value,data:new Date().toLocaleString()});save();render();}
+/* ================= CRUD ================= */
+function salvarCliente(){
+  const p=db.planos.find(pl=>pl.nome===planoCliente.value);
+  const obj={nome:nomeCliente.value,plano:p?p.nome:null,saldo:p?p.qtd:0};
+  editCliente!==null?db.clientes[editCliente]=obj:db.clientes.push(obj);
+  editCliente=null;save();render();
+}
+function salvarPlano(){
+  const obj={nome:nomePlano.value,valor:+valorPlano.value,qtd:+qtdPlano.value,tipo:tipoPlano.value};
+  editPlano!==null?db.planos[editPlano]=obj:db.planos.push(obj);
+  editPlano=null;save();render();
+}
+function salvarProduto(){
+  const obj={nome:nomeProd.value,valor:+valorProd.value,tipo:tipoProd.value};
+  editProduto!==null?db.produtos[editProduto]=obj:db.produtos.push(obj);
+  editProduto=null;save();render();
+}
+function salvarDespesa(){
+  const obj={desc:descDespesa.value,valor:+valorDespesa.value,data:new Date().toLocaleString()};
+  editDespesa!==null?db.despesas[editDespesa]=obj:db.despesas.push(obj);
+  editDespesa=null;save();render();
+}
 
-/* ========= RELATÓRIO MENSAL + GRÁFICO ========= */
+/* ================= RELATÓRIO MENSAL ================= */
 function gerarRelatorioMensal(){
   const [ano,m]=mesRelatorio.value.split("-");
   const vendas=db.vendas.filter(v=>{const d=new Date(v.data);return d.getFullYear()==ano&&(d.getMonth()+1)==m});
@@ -247,48 +284,55 @@ function gerarRelatorioMensal(){
     <p>Despesas: R$ ${totalDesp.toFixed(2)}</p>
     <p class="total">Lucro Líquido: R$ ${lucro.toFixed(2)}</p>
   `;
-
   desenharGrafico([faturamento,totalDesp,lucro]);
 }
 function desenharGrafico(val){
-  const c=graficoMensal,g=c.getContext("2d");
-  g.clearRect(0,0,c.width,c.height);
-  const labels=["Faturamento","Despesas","Lucro"];
+  const g=graficoMensal.getContext("2d");
+  g.clearRect(0,0,360,200);
   const cores=["#2ecc71","#e74c3c","#3498db"];
+  const labels=["Faturamento","Despesas","Lucro"];
   const max=Math.max(...val,1);
   val.forEach((v,i)=>{
     const h=(v/max)*120;
     g.fillStyle=cores[i];
-    g.fillRect(50+i*90,160-h,50,h);
-    g.fillText(labels[i],50+i*90,180);
+    g.fillRect(40+i*100,160-h,50,h);
+    g.fillText(labels[i],40+i*100,180);
   });
 }
 
-/* ========= PDF ========= */
+/* ================= PDF ================= */
 function pdfFechamento(){
-  const pdf=new jspdf.jsPDF();
-  pdf.text("Fechamento de Caixa",10,10);
-  db.vendas.forEach((v,i)=>pdf.text(`${v.data} - R$ ${v.total}`,10,20+i*8));
-  pdf.save("fechamento.pdf");
+  const {jsPDF}=window.jspdf;
+  const pdf=new jsPDF();
+  let y=10;
+  pdf.text("FECHAMENTO DE CAIXA",10,y);y+=10;
+  pdf.text("Abertura: R$ "+db.caixa.abertura.toFixed(2),10,y);y+=10;
+  db.vendas.forEach(v=>{
+    pdf.text(`${v.data} | ${v.cliente} | ${v.pagamento} | R$ ${v.total.toFixed(2)}`,10,y);
+    y+=8;
+  });
+  pdf.save("fechamento-caixa.pdf");
 }
 function pdfRelatorioMensal(){
-  const pdf=new jspdf.jsPDF();
-  pdf.text("Relatório Mensal",10,10);
-  pdf.text(resumoMensal.innerText,10,20);
+  const {jsPDF}=window.jspdf;
+  const pdf=new jsPDF();
+  let y=10;
+  pdf.text("RELATÓRIO MENSAL",10,y);y+=10;
+  pdf.text(resumoMensal.innerText,10,y);
   pdf.save("relatorio-mensal.pdf");
 }
 
-/* ========= RENDER ========= */
+/* ================= RENDER ================= */
 function render(){
   statusCaixa.innerText=db.caixa.aberto?"🟢 Caixa aberto":"🔴 Caixa fechado";
   cliente.innerHTML=db.clientes.map(c=>`<option>${c.nome}</option>`).join("");
   clienteAgenda.innerHTML=cliente.innerHTML;
-  planoCliente.innerHTML=db.planos.map(p=>`<option>${p.nome}</option>`).join("");
+  planoCliente.innerHTML=`<option value="">Sem plano</option>`+db.planos.map(p=>`<option>${p.nome}</option>`).join("");
   tipoPlano.innerHTML=db.produtos.filter(p=>p.tipo==="servico").map(p=>`<option>${p.nome}</option>`).join("");
   produto.innerHTML=db.produtos.map(p=>`<option value="${p.nome}|${p.valor}">${p.nome}</option>`).join("");
   servicoAgenda.innerHTML=db.produtos.filter(p=>p.tipo==="servico").map(p=>`<option>${p.nome}</option>`).join("");
   horaAgenda.innerHTML=gerarHorarios15().map(h=>`<option>${h}</option>`).join("");
-  renderCarrinho();
+  renderCarrinho();renderAgenda();
 }
 render();
 </script>
