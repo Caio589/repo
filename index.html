@@ -65,7 +65,6 @@ th,td{border-bottom:1px solid rgba(255,255,255,.2);padding:6px}
   <button onclick="finalizarVenda()">Finalizar Venda</button>
   <button onclick="abrirCaixa()">Abrir Caixa</button>
   <button onclick="fecharCaixa()">Fechar Caixa</button>
-  <button onclick="pdfCaixa()">📄 PDF Caixa</button>
 </div>
 
 <!-- AGENDA -->
@@ -201,22 +200,33 @@ function render(){
   renderAgenda();
 }
 
-// ===== PDV =====
+// ===== PDV (BLOQUEIO ATIVO) =====
 function addItem(){
   if(!db.caixa.aberto) return alert("Abra o caixa");
 
   const [nome,valor,tipo] = produto.value.split("|");
   const cli = db.clientes.find(c=>c.nome===cliente.value);
 
+  // 🔒 BLOQUEIA SERVIÇO ERRADO
+  if(
+    cli &&
+    cli.plano &&
+    tipo==="servico" &&
+    !db.planos.find(p => p.nome===cli.plano && p.tipo===nome)
+  ){
+    return alert("❌ Serviço não faz parte do plano do cliente");
+  }
+
+  // ✔ USA PLANO
   if(
     cli &&
     cli.plano &&
     tipo==="servico" &&
     cli.saldo>0 &&
-    db.planos.find(p=>p.nome===cli.plano && p.tipo===nome)
+    db.planos.find(p => p.nome===cli.plano && p.tipo===nome)
   ){
     cli.saldo--;
-    alert("Plano utilizado. Saldo: "+cli.saldo);
+    alert("✅ Plano utilizado. Saldo: "+cli.saldo);
     save(); render();
     return;
   }
