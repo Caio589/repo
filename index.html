@@ -7,33 +7,17 @@
 <script src="jspdf.umd.min.js"></script>
 
 <style>
-body{
-  margin:0;font-family:Arial;
-  background:url("https://images.unsplash.com/photo-1503951914875-452162b0f3f1");
-  background-size:cover;background-position:center
-}
+body{margin:0;font-family:Arial;background:url("https://images.unsplash.com/photo-1503951914875-452162b0f3f1");background-size:cover;background-position:center}
 .overlay{background:rgba(0,0,0,.75);min-height:100vh}
-.menu{
-  position:fixed;left:0;top:0;bottom:0;width:70px;
-  background:rgba(0,0,0,.4);
-  display:flex;flex-direction:column;align-items:center;padding-top:20px
-}
-.menu button{
-  background:none;border:none;color:#f1c40f;
-  font-size:22px;margin:15px 0;cursor:pointer
-}
+.menu{position:fixed;left:0;top:0;bottom:0;width:70px;background:rgba(0,0,0,.4);display:flex;flex-direction:column;align-items:center;padding-top:20px}
+.menu button{background:none;border:none;color:#f1c40f;font-size:22px;margin:15px 0;cursor:pointer}
 .content{margin-left:90px;padding:20px;color:#fff}
 .section{display:none}.section.active{display:block}
 input,select,button{padding:8px;border-radius:6px;border:none;margin:4px 0}
 button{cursor:pointer;font-weight:bold}
-table{width:100%;border-collapse:collapse}
-th,td{border-bottom:1px solid rgba(255,255,255,.2);padding:6px}
 .total{font-size:20px;color:#2ecc71}
-.neg{color:#e74c3c}
-.ok{color:#2ecc71}
-.warn{color:#f1c40f}
-canvas{background:#111;border-radius:8px;margin-top:10px}
-small{color:#ccc}
+.caixaAberto{color:#2ecc71;font-size:20px;font-weight:bold}
+.hidden{display:none}
 </style>
 </head>
 
@@ -42,127 +26,69 @@ small{color:#ccc}
 
 <div class="menu">
   <button onclick="show('pdv')">💈</button>
-  <button onclick="show('agenda')">🕒</button>
   <button onclick="show('clientes')">👤</button>
-  <button onclick="show('planos')">💳</button>
   <button onclick="show('produtos')">📦</button>
   <button onclick="show('despesas')">🧾</button>
-  <button onclick="show('mensal')">📆</button>
   <button onclick="show('historico')">📚</button>
 </div>
 
 <div class="content">
 
-<!-- ================= PDV ================= -->
+<!-- PDV -->
 <div id="pdv" class="section active">
   <h2>PDV / Caixa</h2>
+
   <p id="statusCaixa"></p>
 
-  <input id="valorAbertura" type="number" placeholder="Valor de abertura">
-  <button onclick="abrirCaixa()">Abrir Caixa</button>
+  <div id="abrirBox">
+    <input id="valorAbertura" type="number" placeholder="Valor de abertura">
+    <button onclick="abrirCaixa()">Abrir Caixa</button>
+  </div>
 
-  <h4>Período do Caixa</h4>
-  <input type="date" id="periodoInicio">
-  <input type="date" id="periodoFim">
-
-  <hr>
-
-  <select id="cliente"></select>
-  <select id="produto"></select>
   <select id="pagamento">
     <option value="dinheiro">Dinheiro</option>
     <option value="pix">Pix</option>
     <option value="cartao">Cartão</option>
   </select>
 
-  <button onclick="addItem()">Adicionar</button>
+  <input id="itemNome" placeholder="Item">
+  <input id="itemValor" type="number" placeholder="Valor">
+  <button onclick="finalizarVenda()">Registrar Venda</button>
 
-  <table id="carrinho"></table>
-  <p class="total">Total: R$ <span id="total">0.00</span></p>
+  <p class="total">Total do dia: R$ <span id="totalDia">0.00</span></p>
 
-  <button onclick="finalizarVenda()">Finalizar Venda</button>
   <button onclick="fecharCaixa()">Fechar Caixa</button>
-  <button onclick="pdfFechamento()">📄 PDF Fechamento</button>
-
-  <div id="resumoCaixa"></div>
-
-  <h4>Conferência de Dinheiro</h4>
-  <input id="dinheiroContado" type="number" placeholder="Dinheiro contado">
-  <p id="resultadoConferencia"></p>
-
-  <canvas id="graficoCaixa" width="380" height="200"></canvas>
 </div>
 
-<!-- ================= AGENDA ================= -->
-<div id="agenda" class="section">
-  <h2>Agenda (15 em 15)</h2>
-  <input type="date" id="dataAgenda">
-  <select id="horaAgenda"></select>
-  <select id="clienteAgenda"></select>
-  <select id="servicoAgenda"></select>
-  <button onclick="salvarAgendamento()">Agendar</button>
-  <ul id="listaAgenda"></ul>
-</div>
-
-<!-- ================= CLIENTES ================= -->
+<!-- CLIENTES -->
 <div id="clientes" class="section">
   <h2>Clientes</h2>
   <input id="nomeCliente" placeholder="Nome">
-  <select id="planoCliente"></select>
   <button onclick="salvarCliente()">Salvar</button>
   <ul id="listaClientes"></ul>
 </div>
 
-<!-- ================= PLANOS ================= -->
-<div id="planos" class="section">
-  <h2>Planos</h2>
-  <input id="nomePlano" placeholder="Nome">
-  <input id="valorPlano" type="number" placeholder="Valor">
-  <input id="qtdPlano" type="number" placeholder="Qtd serviços">
-  <select id="tipoPlano"></select>
-  <button onclick="salvarPlano()">Salvar</button>
-  <ul id="listaPlanos"></ul>
-</div>
-
-<!-- ================= PRODUTOS ================= -->
+<!-- PRODUTOS -->
 <div id="produtos" class="section">
-  <h2>Produtos / Serviços</h2>
+  <h2>Produtos</h2>
   <input id="nomeProd" placeholder="Nome">
   <input id="valorProd" type="number" placeholder="Valor">
-  <select id="tipoProd">
-    <option value="produto">Produto</option>
-    <option value="servico">Serviço</option>
-  </select>
   <button onclick="salvarProduto()">Salvar</button>
   <ul id="listaProdutos"></ul>
 </div>
 
-<!-- ================= DESPESAS ================= -->
+<!-- DESPESAS -->
 <div id="despesas" class="section">
   <h2>Despesas</h2>
   <input id="descDespesa" placeholder="Descrição">
   <input id="valorDespesa" type="number" placeholder="Valor">
-  <select id="tipoDespesa">
-    <option value="variavel">Variável</option>
-    <option value="fixa">Fixa mensal</option>
-  </select>
   <button onclick="salvarDespesa()">Salvar</button>
   <ul id="listaDespesas"></ul>
 </div>
 
-<!-- ================= RELATÓRIO MENSAL ================= -->
-<div id="mensal" class="section">
-  <h2>Relatório Mensal</h2>
-  <input type="month" id="mesRelatorio">
-  <button onclick="gerarRelatorioMensal()">Gerar</button>
-  <button onclick="pdfRelatorioMensal()">📄 PDF Mensal</button>
-  <div id="resumoMensal"></div>
-  <canvas id="graficoMensal" width="380" height="200"></canvas>
-</div>
-
-<!-- ================= HISTÓRICO ================= -->
+<!-- HISTÓRICO -->
 <div id="historico" class="section">
-  <h2>Histórico de Fechamentos</h2>
+  <h2>Histórico de Caixa</h2>
   <ul id="listaHistorico"></ul>
 </div>
 
@@ -170,318 +96,75 @@ small{color:#ccc}
 </div>
 
 <script>
-/* =====================================================
-   BASE / DB
-===================================================== */
 function show(id){
   document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
   document.getElementById(id).classList.add("active");
 }
 
 const db = JSON.parse(localStorage.getItem("db")) || {
-  clientes:[], planos:[], produtos:[],
-  vendas:[], despesas:[], agenda:[],
-  historico:[],
-  caixa:{aberto:false,abertura:0}
+  clientes:[], produtos:[], despesas:[], vendas:[],
+  historico:[], caixa:{aberto:false,abertura:0}
 };
 
-let carrinho=[];
 function save(){localStorage.setItem("db",JSON.stringify(db))}
 
-/* =====================================================
-   AGENDA
-===================================================== */
-function gerarHorarios15(){
-  let h=[];
-  for(let i=8;i<=20;i++){
-    ["00","15","30","45"].forEach(m=>h.push(`${String(i).padStart(2,"0")}:${m}`));
-  }
-  return h;
-}
-
-function salvarAgendamento(){
-  if(db.agenda.find(a=>a.data===dataAgenda.value && a.hora===horaAgenda.value))
-    return alert("Horário ocupado");
-  db.agenda.push({
-    data:dataAgenda.value,
-    hora:horaAgenda.value,
-    cliente:clienteAgenda.value,
-    servico:servicoAgenda.value
-  });
-  save(); render();
-}
-
-/* =====================================================
-   PDV / CAIXA
-===================================================== */
 function abrirCaixa(){
-  db.caixa.aberto=true;
-  db.caixa.abertura=+valorAbertura.value||0;
-  carrinho=[];
-  save(); render();
-}
-
-function addItem(){
-  const [nome,valor,tipo]=produto.value.split("|");
-  carrinho.push({nome,valor:+valor});
-  renderCarrinho();
+  db.caixa.aberto = true;
+  db.caixa.abertura = +valorAbertura.value || 0;
+  db.vendas = [];
+  save();
+  render();
 }
 
 function finalizarVenda(){
-  if(!carrinho.length) return;
-  const total=carrinho.reduce((s,i)=>s+i.valor,0);
-  db.vendas.push({
-    data:new Date().toLocaleString(),
-    cliente:cliente.value,
-    pagamento:pagamento.value,
-    total
-  });
-  carrinho=[];
-  save(); render();
+  if(!db.caixa.aberto) return alert("Abra o caixa");
+  const v = +itemValor.value || 0;
+  db.vendas.push({valor:v, pagamento:pagamento.value});
+  save();
+  render();
 }
 
 function fecharCaixa(){
-  const ini=periodoInicio.value?new Date(periodoInicio.value):null;
-  const fim=periodoFim.value?new Date(periodoFim.value+" 23:59:59"):null;
-
-  let pix=0,cartao=0,dinheiro=0,planos=0;
-  let qtdVendas=0,qtdPlanos=0;
-
-  const vendasPeriodo=db.vendas.filter(v=>{
-    const dt=new Date(v.data);
-    if(ini&&dt<ini)return false;
-    if(fim&&dt>fim)return false;
-    return true;
-  });
-
-  vendasPeriodo.forEach(v=>{
-    if(v.pagamento==="plano"){
-      planos+=v.total; qtdPlanos++;
-    }else{
-      qtdVendas++;
-      if(v.pagamento==="pix")pix+=v.total;
-      if(v.pagamento==="cartao")cartao+=v.total;
-      if(v.pagamento==="dinheiro")dinheiro+=v.total;
-    }
-  });
-
-  const despesasPeriodo=db.despesas.filter(d=>{
-    if(d.tipo==="fixa")return false;
-    const dt=new Date(d.data);
-    if(ini&&dt<ini)return false;
-    if(fim&&dt>fim)return false;
-    return true;
-  });
-
-  const despesas=despesasPeriodo.reduce((s,d)=>s+d.valor,0);
-  const faturamento=pix+cartao+dinheiro+planos;
-  const saldoEsperado=db.caixa.abertura+faturamento-despesas;
-
-  const contado=+dinheiroContado.value||0;
-  const diff=contado-dinheiro;
-
-  resumoCaixa.innerHTML=`
-    <h3>Fechamento do Caixa</h3>
-    <p>Abertura: R$ ${db.caixa.abertura.toFixed(2)}</p>
-    <p>Faturamento: R$ ${faturamento.toFixed(2)}</p>
-    <p>Pix: R$ ${pix.toFixed(2)}</p>
-    <p>Cartão: R$ ${cartao.toFixed(2)}</p>
-    <p>Dinheiro: R$ ${dinheiro.toFixed(2)}</p>
-    <p>Despesas: R$ ${despesas.toFixed(2)}</p>
-    <p>Qtd vendas: ${qtdVendas}</p>
-    <p>Qtd planos: ${qtdPlanos}</p>
-    <p class="total">Saldo esperado: R$ ${saldoEsperado.toFixed(2)}</p>
-  `;
-
-  if(contado===0){
-    resultadoConferencia.innerText="Informe o dinheiro contado";
-    resultadoConferencia.className="warn";
-  }else if(diff===0){
-    resultadoConferencia.innerText="✔ Caixa conferido";
-    resultadoConferencia.className="ok";
-  }else if(diff<0){
-    resultadoConferencia.innerText=`❌ Falta R$ ${Math.abs(diff).toFixed(2)}`;
-    resultadoConferencia.className="neg";
-  }else{
-    resultadoConferencia.innerText=`⚠️ Sobra R$ ${diff.toFixed(2)}`;
-    resultadoConferencia.className="warn";
-  }
-
-  desenharGraficoCaixa(pix,cartao,dinheiro,despesas,saldoEsperado);
-
+  const total = db.vendas.reduce((s,v)=>s+v.valor,0);
   db.historico.push({
-    periodo:`${periodoInicio.value} até ${periodoFim.value}`,
-    faturamento,despesas,saldoEsperado,
-    pix,cartao,dinheiro,planos,
-    contado,diff,
-    data:new Date().toLocaleString()
+    data:new Date().toLocaleString(),
+    abertura:db.caixa.abertura,
+    total
   });
-
-  db.caixa.aberto=false;
-  save(); render();
+  db.caixa.aberto = false;
+  save();
+  render();
 }
 
-/* =====================================================
-   CADASTROS
-===================================================== */
 function salvarCliente(){
-  const obj={nome:nomeCliente.value};
-  db.clientes.push(obj);
+  db.clientes.push({nome:nomeCliente.value});
   save(); render();
 }
-
-function salvarPlano(){
-  const obj={nome:nomePlano.value,valor:+valorPlano.value,qtd:+qtdPlano.value,tipo:tipoPlano.value};
-  db.planos.push(obj);
-  save(); render();
-}
-
 function salvarProduto(){
-  const obj={nome:nomeProd.value,valor:+valorProd.value,tipo:tipoProd.value};
-  db.produtos.push(obj);
+  db.produtos.push({nome:nomeProd.value,valor:+valorProd.value});
   save(); render();
 }
-
 function salvarDespesa(){
-  const obj={
-    desc:descDespesa.value,
-    valor:+valorDespesa.value,
-    tipo:tipoDespesa.value,
-    data:new Date().toLocaleString()
-  };
-  db.despesas.push(obj);
+  db.despesas.push({desc:descDespesa.value,valor:+valorDespesa.value});
   save(); render();
 }
 
-/* =====================================================
-   RELATÓRIO MENSAL
-===================================================== */
-function gerarRelatorioMensal(){
-  const [ano,m]=mesRelatorio.value.split("-");
-  const vendas=db.vendas.filter(v=>{
-    const d=new Date(v.data);
-    return d.getFullYear()==ano&&(d.getMonth()+1)==m;
-  });
-
-  const despesas=db.despesas.filter(d=>{
-    if(d.tipo==="fixa")return true;
-    const dt=new Date(d.data);
-    return dt.getFullYear()==ano&&(dt.getMonth()+1)==m;
-  });
-
-  const fat=vendas.reduce((s,v)=>s+v.total,0);
-  const desp=despesas.reduce((s,d)=>s+d.valor,0);
-  const lucro=fat-desp;
-
-  resumoMensal.innerHTML=`
-    <p>Faturamento: R$ ${fat.toFixed(2)}</p>
-    <p>Despesas: R$ ${desp.toFixed(2)}</p>
-    <p class="total">Lucro: R$ ${lucro.toFixed(2)}</p>
-  `;
-
-  desenharGraficoMensal(fat,desp,lucro);
-}
-
-/* =====================================================
-   GRÁFICOS
-===================================================== */
-function desenharGraficoCaixa(pix,cartao,dinheiro,desp,saldo){
-  const g=graficoCaixa.getContext("2d");
-  g.clearRect(0,0,380,200);
-  const vals=[pix,cartao,dinheiro,desp,saldo];
-  const labels=["Pix","Cartão","Dinheiro","Despesas","Saldo"];
-  const cores=["#2ecc71","#3498db","#f1c40f","#e74c3c","#9b59b6"];
-  const max=Math.max(...vals,1);
-  vals.forEach((v,i)=>{
-    const h=(v/max)*120;
-    g.fillStyle=cores[i];
-    g.fillRect(30+i*65,160-h,40,h);
-    g.fillText(labels[i],30+i*65,180);
-  });
-}
-
-function desenharGraficoMensal(fat,desp,luc){
-  const g=graficoMensal.getContext("2d");
-  g.clearRect(0,0,380,200);
-  const vals=[fat,desp,luc];
-  const labels=["Faturamento","Despesas","Lucro"];
-  const cores=["#2ecc71","#e74c3c","#3498db"];
-  const max=Math.max(...vals,1);
-  vals.forEach((v,i)=>{
-    const h=(v/max)*120;
-    g.fillStyle=cores[i];
-    g.fillRect(60+i*100,160-h,50,h);
-    g.fillText(labels[i],60+i*100,180);
-  });
-}
-
-/* =====================================================
-   PDF
-===================================================== */
-function pdfFechamento(){
-  const {jsPDF}=window.jspdf;
-  const pdf=new jsPDF();
-  let y=10;
-  pdf.text("FECHAMENTO DE CAIXA",10,y);y+=10;
-  db.historico.slice(-1).forEach(h=>{
-    pdf.text(`Período: ${h.periodo}`,10,y);y+=10;
-    pdf.text(`Faturamento: R$ ${h.faturamento.toFixed(2)}`,10,y);y+=10;
-    pdf.text(`Despesas: R$ ${h.despesas.toFixed(2)}`,10,y);y+=10;
-    pdf.text(`Saldo: R$ ${h.saldoEsperado.toFixed(2)}`,10,y);
-  });
-  pdf.save("fechamento-caixa.pdf");
-}
-
-function pdfRelatorioMensal(){
-  const {jsPDF}=window.jspdf;
-  const pdf=new jsPDF();
-  pdf.text("RELATÓRIO MENSAL",10,10);
-  pdf.text(resumoMensal.innerText,10,20);
-  pdf.save("relatorio-mensal.pdf");
-}
-
-/* =====================================================
-   RENDER
-===================================================== */
 function render(){
-  statusCaixa.innerText=db.caixa.aberto?"🟢 Caixa aberto":"🔴 Caixa fechado";
+  statusCaixa.innerHTML = db.caixa.aberto
+    ? '<span class="caixaAberto">🟢 CAIXA ABERTO</span>'
+    : '<span>🔴 CAIXA FECHADO</span>';
 
-  cliente.innerHTML=db.clientes.map(c=>`<option>${c.nome}</option>`).join("");
-  clienteAgenda.innerHTML=cliente.innerHTML;
+  abrirBox.classList.toggle("hidden", db.caixa.aberto);
 
-  produto.innerHTML=db.produtos.map(p=>`<option value="${p.nome}|${p.valor}|${p.tipo}">${p.nome}</option>`).join("");
-  servicoAgenda.innerHTML=db.produtos.filter(p=>p.tipo==="servico").map(p=>`<option>${p.nome}</option>`).join("");
+  totalDia.innerText = db.vendas.reduce((s,v)=>s+v.valor,0).toFixed(2);
 
-  planoCliente.innerHTML=db.planos.map(p=>`<option>${p.nome}</option>`).join("");
-  tipoPlano.innerHTML=db.produtos.filter(p=>p.tipo==="servico").map(p=>`<option>${p.nome}</option>`).join("");
+  listaClientes.innerHTML = db.clientes.map(c=>`<li>${c.nome}</li>`).join("");
+  listaProdutos.innerHTML = db.produtos.map(p=>`<li>${p.nome} - R$ ${p.valor}</li>`).join("");
+  listaDespesas.innerHTML = db.despesas.map(d=>`<li>${d.desc} - R$ ${d.valor}</li>`).join("");
 
-  horaAgenda.innerHTML=gerarHorarios15().map(h=>`<option>${h}</option>`).join("");
-
-  listaClientes.innerHTML=db.clientes.map(c=>`<li>${c.nome}</li>`).join("");
-  listaPlanos.innerHTML=db.planos.map(p=>`<li>${p.nome} - R$ ${p.valor}</li>`).join("");
-  listaProdutos.innerHTML=db.produtos.map(p=>`<li>${p.nome} (${p.tipo})</li>`).join("");
-  listaDespesas.innerHTML=db.despesas.map(d=>`<li>${d.desc} - R$ ${d.valor} (${d.tipo})</li>`).join("");
-  listaAgenda.innerHTML=db.agenda.map(a=>`<li>${a.data} ${a.hora} - ${a.cliente}</li>`).join("");
-  listaHistorico.innerHTML=db.historico.map(h=>`
-    <li>
-      <b>${h.periodo}</b><br>
-      Faturamento: R$ ${h.faturamento.toFixed(2)}<br>
-      Despesas: R$ ${h.despesas.toFixed(2)}<br>
-      Saldo: R$ ${h.saldoEsperado.toFixed(2)}
-    </li>
+  listaHistorico.innerHTML = db.historico.map(h=>`
+    <li>${h.data} | Abertura R$ ${h.abertura} | Total R$ ${h.total}</li>
   `).join("");
-
-  renderCarrinho();
-}
-
-function renderCarrinho(){
-  let h="<tr><th>Item</th><th>Valor</th></tr>",s=0;
-  carrinho.forEach(i=>{
-    h+=`<tr><td>${i.nome}</td><td>R$ ${i.valor.toFixed(2)}</td></tr>`;
-    s+=i.valor;
-  });
-  carrinho.innerHTML=h;
-  total.innerText=s.toFixed(2);
 }
 
 render();
