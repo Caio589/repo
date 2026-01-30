@@ -10,7 +10,7 @@
 </head>
 <body>
 
-<!-- SPLASH COM FOTO -->
+<!-- SPLASH -->
 <div id="splash" class="splash">
   <div class="splash-overlay"></div>
   <div class="splash-box">
@@ -20,52 +20,67 @@
   </div>
 </div>
 
-<div class="container">
-  <h2>💈 Sistema de Barbearia</h2>
+<div class="app">
 
-  <div id="aberturaCaixa" class="card">
-    <h3>Abertura de Caixa</h3>
-    <input type="number" id="valorInicial" placeholder="Valor inicial">
-    <button onclick="abrirCaixa()">Abrir Caixa</button>
-  </div>
+  <!-- MENU LATERAL -->
+  <aside class="sidebar">
+    <button onclick="abrirTela('vendas')">💈<span>Vendas</span></button>
+    <button onclick="abrirTela('clientes')">👤<span>Clientes</span></button>
+    <button onclick="abrirTela('servicos')">✂️<span>Serviços</span></button>
+    <button onclick="abrirTela('caixa')">💰<span>Caixa</span></button>
+  </aside>
 
-  <div id="sistema" class="hidden">
+  <!-- CONTEÚDO -->
+  <main class="content">
 
-    <div class="card">
-      <h3>Clientes</h3>
-      <input id="nomeCliente" placeholder="Nome do cliente">
-      <button onclick="cadastrarCliente()">Cadastrar</button>
-    </div>
+    <!-- VENDAS -->
+    <section id="vendas" class="tela ativa vendas-bg">
+      <div class="card transparente">
+        <h2>Registrar Venda</h2>
+        <select id="clienteVenda"></select>
+        <select id="servicoVenda"></select>
+        <button onclick="registrarVenda()">Registrar</button>
+      </div>
+    </section>
 
-    <div class="card">
-      <h3>Serviços</h3>
-      <input id="nomeServico" placeholder="Serviço">
-      <input id="precoServico" type="number" placeholder="Preço">
-      <button onclick="cadastrarServico()">Cadastrar</button>
-    </div>
+    <!-- CLIENTES -->
+    <section id="clientes" class="tela">
+      <div class="card">
+        <h2>Cadastro de Clientes</h2>
+        <input id="nomeCliente" placeholder="Nome do cliente">
+        <button onclick="cadastrarCliente()">Cadastrar</button>
+      </div>
+    </section>
 
-    <div class="card">
-      <h3>Registrar Corte</h3>
-      <select id="clienteVenda"></select>
-      <select id="servicoVenda"></select>
-      <button onclick="registrarVenda()">Registrar</button>
-    </div>
+    <!-- SERVIÇOS -->
+    <section id="servicos" class="tela">
+      <div class="card">
+        <h2>Cadastro de Serviços</h2>
+        <input id="nomeServico" placeholder="Serviço">
+        <input id="precoServico" type="number" placeholder="Preço">
+        <button onclick="cadastrarServico()">Cadastrar</button>
+      </div>
+    </section>
 
-    <div class="card">
-      <h3>Resumo do Caixa</h3>
-      <p>Inicial: R$ <span id="resInicial"></span></p>
-      <p>Vendas: R$ <span id="resVendas"></span></p>
-      <p><strong>Total: R$ <span id="resTotal"></span></strong></p>
-      <button onclick="gerarPDF()">📄 Fechar Caixa (PDF)</button>
-      <button class="fechar" onclick="fecharCaixa()">Encerrar Caixa</button>
-    </div>
+    <!-- CAIXA -->
+    <section id="caixa" class="tela">
+      <div class="card">
+        <h2>Abertura de Caixa</h2>
+        <input type="number" id="valorInicial" placeholder="Valor inicial">
+        <button onclick="abrirCaixa()">Abrir Caixa</button>
+      </div>
 
-    <div class="card">
-      <h3>Histórico</h3>
-      <ul id="listaVendas"></ul>
-    </div>
+      <div class="card">
+        <h2>Resumo</h2>
+        <p>Inicial: R$ <span id="resInicial"></span></p>
+        <p>Vendas: R$ <span id="resVendas"></span></p>
+        <p><strong>Total: R$ <span id="resTotal"></span></strong></p>
+        <button onclick="gerarPDF()">📄 Fechamento (PDF)</button>
+        <button class="fechar" onclick="fecharCaixa()">Encerrar Caixa</button>
+      </div>
+    </section>
 
-  </div>
+  </main>
 </div>
 
 <script src="script.js"></script>
