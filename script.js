@@ -1,115 +1,102 @@
 let caixa = JSON.parse(localStorage.getItem("caixa")) || null;
-let servicos = JSON.parse(localStorage.getItem("servicos")) || [];
 let clientes = JSON.parse(localStorage.getItem("clientes")) || [];
+let servicos = JSON.parse(localStorage.getItem("servicos")) || [];
 
-function abrirCaixa() {
-  const valor = parseFloat(valorInicial.value);
-  if (isNaN(valor) || valor < 0) return alert("Valor inválido");
+function entrarSistema(){
+  document.getElementById("splash").style.display = "none";
+  localStorage.setItem("splash_ok","1");
+}
 
-  caixa = {
-    aberto: true,
-    valorInicial: valor,
-    vendas: [],
-    data: new Date().toLocaleString("pt-BR")
-  };
+window.onload = () => {
+  if(localStorage.getItem("splash_ok")){
+    document.getElementById("splash").style.display = "none";
+  }
+  render();
+};
 
+function abrirCaixa(){
+  caixa = { valorInicial:+valorInicial.value, vendas:[], data:new Date() };
   salvar();
   render();
 }
 
-/* CLIENTES */
-function cadastrarCliente() {
-  const nome = nomeCliente.value.trim();
-  const tel = telCliente.value.trim();
-
-  if (!nome) return alert("Informe o nome do cliente");
-
-  clientes.push({ nome, tel });
-  localStorage.setItem("clientes", JSON.stringify(clientes));
-
-  nomeCliente.value = "";
-  telCliente.value = "";
+function cadastrarCliente(){
+  clientes.push({ nome:nomeCliente.value });
+  nomeCliente.value="";
+  localStorage.setItem("clientes",JSON.stringify(clientes));
   render();
 }
 
-/* SERVIÇOS */
-function cadastrarServico() {
-  const nome = nomeServico.value.trim();
-  const preco = parseFloat(precoServico.value);
-  if (!nome || isNaN(preco)) return alert("Dados inválidos");
-
-  servicos.push({ nome, preco });
-  localStorage.setItem("servicos", JSON.stringify(servicos));
-
-  nomeServico.value = "";
-  precoServico.value = "";
+function cadastrarServico(){
+  servicos.push({ nome:nomeServico.value, preco:+precoServico.value });
+  nomeServico.value=precoServico.value="";
+  localStorage.setItem("servicos",JSON.stringify(servicos));
   render();
 }
 
-/* VENDA */
-function registrarVenda() {
-  const idxCliente = clienteVenda.value;
-  const idxServico = servicoVenda.value;
-
-  if (idxServico === "") return alert("Selecione um serviço");
-
-  const cliente = clientes[idxCliente] || { nome: "Cliente não informado" };
-  const servico = servicos[idxServico];
+function registrarVenda(){
+  const c = clientes[clienteVenda.value];
+  const s = servicos[servicoVenda.value];
 
   caixa.vendas.push({
-    cliente: cliente.nome,
-    servico: servico.nome,
-    preco: servico.preco,
-    hora: new Date().toLocaleTimeString("pt-BR")
+    cliente:c.nome,
+    servico:s.nome,
+    valor:s.preco,
+    hora:new Date().toLocaleTimeString("pt-BR")
   });
 
   salvar();
   render();
 }
 
-function fecharCaixa() {
-  if (!confirm("Fechar caixa?")) return;
+function fecharCaixa(){
   localStorage.removeItem("caixa");
-  caixa = null;
+  caixa=null;
   render();
 }
 
-function salvar() {
-  localStorage.setItem("caixa", JSON.stringify(caixa));
+function salvar(){
+  localStorage.setItem("caixa",JSON.stringify(caixa));
 }
 
-function render() {
-  aberturaCaixa.classList.toggle("hidden", caixa && caixa.aberto);
-  sistema.classList.toggle("hidden", !(caixa && caixa.aberto));
-  if (!caixa) return;
+function render(){
+  aberturaCaixa.classList.toggle("hidden",!!caixa);
+  sistema.classList.toggle("hidden",!caixa);
+  if(!caixa) return;
 
-  /* RESUMO */
+  const total = caixa.vendas.reduce((s,v)=>s+v.valor,0);
   resInicial.innerText = caixa.valorInicial.toFixed(2);
-  const totalVendas = caixa.vendas.reduce((s, v) => s + v.preco, 0);
-  resVendas.innerText = totalVendas.toFixed(2);
-  resTotal.innerText = (caixa.valorInicial + totalVendas).toFixed(2);
+  resVendas.innerText = total.toFixed(2);
+  resTotal.innerText = (total + caixa.valorInicial).toFixed(2);
 
-  /* SELECT CLIENTES */
-  clienteVenda.innerHTML = `<option value="">Cliente</option>`;
-  clientes.forEach((c, i) => {
-    clienteVenda.innerHTML += `<option value="${i}">${c.nome}</option>`;
-  });
+  clienteVenda.innerHTML="";
+  clientes.forEach((c,i)=>clienteVenda.innerHTML+=`<option value="${i}">${c.nome}</option>`);
 
-  /* SELECT SERVIÇOS */
-  servicoVenda.innerHTML = `<option value="">Serviço</option>`;
-  servicos.forEach((s, i) => {
-    servicoVenda.innerHTML += `<option value="${i}">${s.nome} - R$${s.preco}</option>`;
-  });
+  servicoVenda.innerHTML="";
+  servicos.forEach((s,i)=>servicoVenda.innerHTML+=`<option value="${i}">${s.nome}</option>`);
 
-  /* HISTÓRICO */
-  listaVendas.innerHTML = "";
-  caixa.vendas.forEach(v => {
-    listaVendas.innerHTML += `
-      <li>
-        ${v.hora} - ${v.cliente}<br>
-        ${v.servico} - R$${v.preco}
-      </li>`;
+  listaVendas.innerHTML="";
+  caixa.vendas.forEach(v=>{
+    listaVendas.innerHTML+=`<li>${v.hora} - ${v.cliente} - ${v.servico} R$${v.valor}</li>`;
   });
 }
 
-render();
+function gerarPDF(){
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF();
+
+  let y = 10;
+  pdf.text("Fechamento de Caixa - Barbearia",10,y);
+  y+=10;
+
+  caixa.vendas.forEach(v=>{
+    pdf.text(`${v.hora} - ${v.cliente} - ${v.servico} R$${v.valor}`,10,y);
+    y+=8;
+  });
+
+  const total = caixa.vendas.reduce((s,v)=>s+v.valor,0);
+  y+=10;
+  pdf.text(`Total em vendas: R$ ${total.toFixed(2)}`,10,y);
+
+  pdf.save("fechamento-caixa.pdf");
+}
