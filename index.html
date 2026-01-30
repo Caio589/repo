@@ -5,6 +5,8 @@
 <title>PDV Barbearia</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
 <style>
 body{margin:0;font-family:Arial;background:url("https://images.unsplash.com/photo-1503951914875-452162b0f3f1");background-size:cover;background-position:center}
 .overlay{background:rgba(0,0,0,.72);min-height:100vh}
@@ -69,54 +71,6 @@ th,td{padding:6px;text-align:left}
   <div id="resumoCaixa"></div>
 </div>
 
-<div id="agenda" class="section">
-  <h2>Agenda</h2>
-  <input type="date" id="dataAgenda">
-  <select id="horaAgenda"></select>
-  <select id="clienteAgenda"></select>
-  <select id="servicoAgenda"></select>
-  <button onclick="salvarAgendamento()">Agendar</button>
-  <ul id="listaAgenda"></ul>
-</div>
-
-<div id="clientes" class="section">
-  <h2>Clientes</h2>
-  <input id="nomeCliente" placeholder="Nome">
-  <select id="planoCliente"></select>
-  <button onclick="salvarCliente()">Salvar</button>
-  <ul id="listaClientes"></ul>
-</div>
-
-<div id="planos" class="section">
-  <h2>Planos</h2>
-  <input id="nomePlano" placeholder="Nome">
-  <input id="valorPlano" type="number" placeholder="Valor">
-  <input id="qtdPlano" type="number" placeholder="Qtd serviços">
-  <select id="tipoPlano"></select>
-  <button onclick="salvarPlano()">Salvar</button>
-  <ul id="listaPlanos"></ul>
-</div>
-
-<div id="produtos" class="section">
-  <h2>Produtos / Serviços</h2>
-  <input id="nomeProd" placeholder="Nome">
-  <input id="valorProd" type="number" placeholder="Valor">
-  <select id="tipoProd">
-    <option value="produto">Produto</option>
-    <option value="servico">Serviço</option>
-  </select>
-  <button onclick="salvarProduto()">Salvar</button>
-  <ul id="listaProdutos"></ul>
-</div>
-
-<div id="despesas" class="section">
-  <h2>Despesas</h2>
-  <input id="descDespesa" placeholder="Descrição">
-  <input id="valorDespesa" type="number" placeholder="Valor">
-  <button onclick="salvarDespesa()">Salvar</button>
-  <ul id="listaDespesas"></ul>
-</div>
-
 <div id="mensal" class="section">
   <h2>Relatório Mensal</h2>
   <input type="month" id="mesRelatorio">
@@ -128,14 +82,15 @@ th,td{padding:6px;text-align:left}
 </div>
 
 <script>
+const { jsPDF } = window.jspdf;
+
 function show(id){
   document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
   document.getElementById(id).classList.add("active");
 }
 
 const db = JSON.parse(localStorage.getItem("db")) || {
-  clientes:[], planos:[], produtos:[],
-  vendas:[], despesas:[], agenda:[],
+  clientes:[], produtos:[], vendas:[], despesas:[],
   caixa:{aberto:false,abertura:0,dinheiro:0,pix:0,cartao:0}
 };
 
@@ -170,16 +125,60 @@ function finalizarVenda(){
   if(pagamento.value==="pix") db.caixa.pix+=total;
   if(pagamento.value==="cartao") db.caixa.cartao+=total;
 
-  db.vendas.push({data:new Date().toLocaleString(),total});
+  db.vendas.push({data:new Date().toISOString(),total});
   carrinho=[]; valorPago.value="";
   save(); render();
 }
 
+function gerarPDFCaixa(){
+  const pdf=new jsPDF();
+  let y=20;
+
+  pdf.setFontSize(16);
+  pdf.text("Fechamento de Caixa",20,y); y+=10;
+
+  pdf.setFontSize(11);
+  pdf.text(`Data: ${new Date().toLocaleString()}`,20,y); y+=10;
+  pdf.text(`Abertura: R$ ${db.caixa.abertura.toFixed(2)}`,20,y); y+=8;
+  pdf.text(`Dinheiro: R$ ${db.caixa.dinheiro.toFixed(2)}`,20,y); y+=8;
+  pdf.text(`Pix: R$ ${db.caixa.pix.toFixed(2)}`,20,y); y+=8;
+  pdf.text(`Cartão: R$ ${db.caixa.cartao.toFixed(2)}`,20,y); y+=8;
+
+  pdf.save("fechamento_caixa.pdf");
+}
+
 function fecharCaixa(){
-  alert("Caixa fechado com sucesso");
+  gerarPDFCaixa();
   db.caixa.aberto=false;
-  db.caixa.dinheiro=0;db.caixa.pix=0;db.caixa.cartao=0;
+  db.caixa.dinheiro=0;
+  db.caixa.pix=0;
+  db.caixa.cartao=0;
   save(); render();
+}
+
+function gerarRelatorioMensal(){
+  const [ano,mes]=mesRelatorio.value.split("-");
+  const vendasMes=db.vendas.filter(v=>{
+    const d=new Date(v.data);
+    return d.getFullYear()==ano && (d.getMonth()+1)==mes;
+  });
+
+  const total=vendasMes.reduce((s,v)=>s+v.total,0);
+  resumoMensal.innerHTML=`<p>Total do mês: R$ ${total.toFixed(2)}</p>`;
+
+  const pdf=new jsPDF();
+  let y=20;
+  pdf.setFontSize(16);
+  pdf.text("Relatório Mensal",20,y); y+=10;
+  pdf.text(`Mês/Ano: ${mes}/${ano}`,20,y); y+=10;
+
+  vendasMes.forEach(v=>{
+    pdf.text(`Venda: R$ ${v.total.toFixed(2)}`,20,y);
+    y+=7;
+  });
+
+  pdf.text(`Total do mês: R$ ${total.toFixed(2)}`,20,y+5);
+  pdf.save("relatorio_mensal.pdf");
 }
 
 function renderCarrinho(){
@@ -195,12 +194,6 @@ function renderCarrinho(){
 function render(){
   statusCaixa.innerText=db.caixa.aberto?"🟢 Caixa aberto":"🔴 Caixa fechado";
   abrirBox.classList.toggle("hidden",db.caixa.aberto);
-
-  cliente.innerHTML=db.clientes.map(c=>`<option>${c.nome}</option>`).join("");
-  clienteAgenda.innerHTML=cliente.innerHTML;
-
-  planoCliente.innerHTML=`<option value="">Sem plano</option>`+
-    db.planos.map(p=>`<option>${p.nome}</option>`).join("");
 
   produto.innerHTML=db.produtos.map(p=>
     `<option value="${p.nome}|${p.valor}">${p.nome}</option>`
