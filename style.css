@@ -1,0 +1,32 @@
+body{
+  margin:0;
+  font-family:Arial;
+  background:url("https://images.unsplash.com/photo-1503951914875-452162b0f3f1");
+  background-size:cover;
+  background-position:center
+}
+
+.overlay{background:rgba(0,0,0,.72);min-height:100vh}
+.menu{
+  position:fixed;left:0;top:0;bottom:0;width:70px;
+  background:rgba(0,0,0,.45);
+  display:flex;flex-direction:column;align-items:center;padding-top:20px
+}
+.menu button{
+  background:none;border:none;color:#f1c40f;
+  font-size:22px;margin:15px 0;cursor:pointer
+}
+.content{margin-left:90px;padding:20px;color:#fff}
+.section{display:none}
+.section.active{display:block}
+
+input,select,button{
+  padding:8px;border-radius:6px;border:none;margin:4px 0
+}
+button{cursor:pointer;font-weight:bold}
+
+.btn-danger{background:#e74c3c;color:#fff}
+.total{font-size:20px;color:#2ecc71}
+
+table{width:100%;margin-top:10px}
+th,td{padding:6px;text-align:left}
