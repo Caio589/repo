@@ -1,3 +1,20 @@
+/* ================= CONTROLE DE TELAS ================= */
+function show(id){
+  document.querySelectorAll(".section").forEach(sec=>{
+    sec.classList.remove("active");
+    sec.style.display = "none";
+  });
+
+  const el = document.getElementById(id);
+  if(el){
+    el.classList.add("active");
+    el.style.display = "block";
+  }
+}
+
+/* expõe para o onclick do HTML */
+window.show = show;
+
 /* ================= DB ================= */
 const db = JSON.parse(localStorage.getItem("db")) || {
   clientes:[],
