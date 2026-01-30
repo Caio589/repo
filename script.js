@@ -1,5 +1,5 @@
 /* =========================
-   TROCA DE TELAS
+   CONTROLE DE TELAS
 ========================= */
 function show(id){
   document.querySelectorAll(".section").forEach(s=>{
@@ -42,7 +42,8 @@ function save(){
 function abrirCaixa(){
   db.caixa.aberto = true;
   db.caixa.abertura = Number(valorAbertura.value) || 0;
-  save(); render();
+  save();
+  render();
 }
 
 function fecharCaixa(){
@@ -50,7 +51,8 @@ function fecharCaixa(){
   db.caixa.dinheiro = 0;
   db.caixa.pix = 0;
   db.caixa.cartao = 0;
-  save(); render();
+  save();
+  render();
 }
 
 /* =========================
@@ -68,7 +70,8 @@ function salvarProduto(){
   nomeProd.value = "";
   valorProd.value = "";
 
-  save(); render();
+  save();
+  render();
 }
 
 /* =========================
@@ -88,7 +91,8 @@ function salvarPlano(){
   valorPlano.value = "";
   qtdPlano.value = "";
 
-  save(); render();
+  save();
+  render();
 }
 
 /* =========================
@@ -109,7 +113,8 @@ function salvarCliente(){
   });
 
   nomeCliente.value = "";
-  save(); render();
+  save();
+  render();
 }
 
 /* =========================
@@ -127,7 +132,8 @@ function salvarDespesa(){
   descDespesa.value = "";
   valorDespesa.value = "";
 
-  save(); render();
+  save();
+  render();
 }
 
 /* =========================
@@ -158,11 +164,12 @@ function salvarAgendamento(){
     servico:servicoAgenda.value
   });
 
-  save(); render();
+  save();
+  render();
 }
 
 /* =========================
-   CARRINHO / PDV
+   PDV / CARRINHO
 ========================= */
 function addItem(){
   if(!produto.value) return;
@@ -183,9 +190,11 @@ function usarPlano(){
   c.plano.saldo--;
   alert(`Plano usado. Saldo restante: ${c.plano.saldo}`);
 
-  save(); render();
+  save();
+  render();
 }
 
+/* >>>>>> ESTA É A FUNÇÃO QUE ESTAVA FALTANDO <<<<<< */
 function finalizarVenda(){
   if(!db.caixa.aberto) return alert("Caixa fechado");
   if(carrinho.length === 0) return alert("Carrinho vazio");
@@ -202,7 +211,9 @@ function finalizarVenda(){
   });
 
   carrinho = [];
-  save(); render();
+  renderCarrinho();
+  save();
+  render();
 }
 
 /* =========================
@@ -217,7 +228,7 @@ function renderCarrinho(){
     soma+=i.valor;
   });
 
-  carrinhoElem.innerHTML = html;
+  document.getElementById("carrinho").innerHTML = html;
   total.innerText = soma.toFixed(2);
 }
 
@@ -225,7 +236,6 @@ function render(){
   statusCaixa.innerText = db.caixa.aberto ? "🟢 Caixa aberto" : "🔴 Caixa fechado";
   abrirBox.style.display = db.caixa.aberto ? "none" : "block";
 
-  /* selects */
   produto.innerHTML = db.produtos.map(p=>
     `<option value="${p.nome}|${p.valor}">${p.nome}</option>`
   ).join("");
@@ -235,7 +245,8 @@ function render(){
 
   tipoPlano.innerHTML = db.produtos
     .filter(p=>p.tipo==="servico")
-    .map(p=>`<option>${p.nome}</option>`).join("");
+    .map(p=>`<option>${p.nome}</option>`)
+    .join("");
 
   planoCliente.innerHTML =
     `<option value="">Sem plano</option>` +
@@ -244,7 +255,6 @@ function render(){
   servicoAgenda.innerHTML = tipoPlano.innerHTML;
   horaAgenda.innerHTML = gerarHorarios15().map(h=>`<option>${h}</option>`).join("");
 
-  /* listas */
   listaProdutos.innerHTML = db.produtos.map(p=>
     `<li>${p.nome} (${p.tipo})</li>`
   ).join("");
@@ -277,7 +287,7 @@ function render(){
 }
 
 /* =========================
-   EXPOR (ONCLICK)
+   EXPOR PARA onclick
 ========================= */
 window.show = show;
 window.abrirCaixa = abrirCaixa;
