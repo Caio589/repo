@@ -8,6 +8,15 @@
 </head>
 <body>
 
+<!-- PATCH DEFINITIVO DO SPLASH (carrega antes de tudo) -->
+<script>
+  function entrarSistema(){
+    const s=document.getElementById("splash");
+    if(s) s.style.display="none";
+    localStorage.setItem("splash_ok","1");
+  }
+</script>
+
 <!-- TOAST -->
 <div id="toast" class="toast"></div>
 
@@ -22,7 +31,6 @@
 </div>
 
 <div class="app">
-
   <!-- MENU -->
   <nav class="menu">
     <button onclick="abrirTela('vendas')">💈</button>
