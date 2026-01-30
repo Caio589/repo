@@ -20,18 +20,29 @@
   <!-- SISTEMA -->
   <div id="sistema" class="hidden">
 
-    <!-- CADASTRO SERVIÇO -->
+    <!-- CLIENTES -->
     <div class="card">
-      <h2>Cadastrar Serviço</h2>
+      <h2>Clientes</h2>
+      <input id="nomeCliente" placeholder="Nome do cliente">
+      <input id="telCliente" placeholder="Telefone">
+      <button onclick="cadastrarCliente()">Cadastrar Cliente</button>
+    </div>
+
+    <!-- SERVIÇOS -->
+    <div class="card">
+      <h2>Serviços</h2>
       <input id="nomeServico" placeholder="Nome do serviço">
       <input id="precoServico" type="number" placeholder="Preço (R$)">
-      <button onclick="cadastrarServico()">Cadastrar</button>
+      <button onclick="cadastrarServico()">Cadastrar Serviço</button>
     </div>
 
     <!-- VENDA -->
     <div class="card">
       <h2>Venda</h2>
+
+      <select id="clienteVenda"></select>
       <select id="servicoVenda"></select>
+
       <button onclick="registrarVenda()">Registrar Venda</button>
     </div>
 
