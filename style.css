@@ -5,22 +5,75 @@ body {
   color: #fff;
 }
 
-.container {
-  max-width: 480px;
-  margin: 20px auto;
+/* APP */
+.app {
+  display: flex;
+  height: 100vh;
 }
 
+/* SIDEBAR */
+.sidebar {
+  width: 70px;
+  background: #111;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 10px;
+}
+
+.sidebar button {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 22px;
+  margin: 15px 0;
+  cursor: pointer;
+}
+
+.sidebar span {
+  display: none;
+}
+
+/* CONTEÚDO */
+.content {
+  flex: 1;
+  position: relative;
+}
+
+/* TELAS */
+.tela {
+  display: none;
+  height: 100%;
+  padding: 30px;
+}
+
+.tela.ativa {
+  display: block;
+}
+
+/* VENDAS COM FOTO */
+.vendas-bg {
+  background-image: url("https://images.unsplash.com/photo-1585747860715-2ba37e788b70?auto=format&fit=crop&w=1600&q=80");
+  background-size: cover;
+  background-position: center;
+}
+
+.transparente {
+  background: rgba(0,0,0,0.75);
+}
+
+/* CARD */
 .card {
   background: #1b1b1b;
-  padding: 15px;
-  border-radius: 10px;
-  margin-bottom: 12px;
+  padding: 20px;
+  border-radius: 12px;
+  max-width: 400px;
 }
 
 input, select, button {
   width: 100%;
   padding: 10px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
   border-radius: 5px;
   border: none;
 }
@@ -28,28 +81,13 @@ input, select, button {
 button {
   background: #c89b3c;
   font-weight: bold;
-  cursor: pointer;
 }
 
 .fechar {
   background: #b22222;
 }
 
-.hidden {
-  display: none;
-}
-
-ul {
-  list-style: none;
-  padding: 0;
-}
-
-li {
-  border-bottom: 1px solid #333;
-  padding: 5px 0;
-}
-
-/* SPLASH COM FOTO ONLINE */
+/* SPLASH */
 .splash {
   position: fixed;
   inset: 0;
@@ -62,17 +100,15 @@ li {
 .splash-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.65);
+  background: rgba(0,0,0,0.65);
 }
 
 .splash-box {
   position: relative;
-  z-index: 2;
-  max-width: 400px;
-  margin: auto;
   top: 50%;
   transform: translateY(-50%);
-  background: rgba(20, 20, 20, 0.9);
+  margin: auto;
+  background: rgba(20,20,20,0.9);
   padding: 30px;
   border-radius: 15px;
   text-align: center;
