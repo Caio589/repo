@@ -183,3 +183,50 @@ function render(){
 }
 
 render();
+// 🔁 RENOVAÇÃO DE PLANO (ADICIONAL — NÃO ALTERA O RESTO)
+function renovarPlanoCliente(){
+  // exige caixa aberto
+  if(!db.caixa || !db.caixa.aberto){
+    alert("Abra o caixa para renovar o plano");
+    return;
+  }
+
+  // usa o cliente selecionado no PDV
+  const nomeCliente = cliente && cliente.value;
+  if(!nomeCliente){
+    alert("Selecione um cliente");
+    return;
+  }
+
+  const c = db.clientes.find(c => c.nome === nomeCliente);
+  if(!c || !c.plano){
+    alert("Cliente não possui plano");
+    return;
+  }
+
+  const planoBase = db.planos.find(p => p.nome === c.plano.nome);
+  if(!planoBase){
+    alert("Plano base não encontrado");
+    return;
+  }
+
+  // soma saldo do plano
+  c.plano.saldo += planoBase.qtd;
+
+  // lança no caixa (mantém sua regra atual)
+  db.caixa.dinheiro = (db.caixa.dinheiro || 0) + planoBase.valor;
+
+  // registra venda
+  db.vendas.push({
+    data: new Date().toISOString(),
+    total: planoBase.valor,
+    tipo: "renovacao",
+    cliente: c.nome,
+    plano: planoBase.nome
+  });
+
+  save();
+  if(typeof render === "function") render();
+
+  alert("Plano renovado com sucesso");
+}
