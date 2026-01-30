@@ -93,9 +93,18 @@ function gerarRelatorioMensal(){
 
 /* ===== RENDER ===== */
 function renderCarrinho(){
-  let h="<tr><th>Item</th><th>Valor</th></tr>",s=0;
-  carrinho.forEach(i=>{h+=`<tr><td>${i.nome}</td><td>${i.valor.toFixed(2)}</td></tr>`;s+=i.valor});
-  carrinhoElem.innerHTML=h;total.innerText=s.toFixed(2);
+  const carrinhoElem = document.getElementById("carrinho");
+
+  let h = "<tr><th>Item</th><th>Valor</th></tr>";
+  let s = 0;
+
+  carrinho.forEach(i=>{
+    h += `<tr><td>${i.nome}</td><td>R$ ${i.valor.toFixed(2)}</td></tr>`;
+    s += i.valor;
+  });
+
+  carrinhoElem.innerHTML = h;
+  total.innerText = s.toFixed(2);
 }
 function render(){
   statusCaixa.innerText=db.caixa.aberto?"🟢 Caixa aberto":"🔴 Caixa fechado";
