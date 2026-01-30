@@ -92,19 +92,83 @@ function gerarRelatorioMensal(){
 }
 
 /* ===== RENDER ===== */
-function renderCarrinho(){
-  const carrinhoElem = document.getElementById("carrinho");
+function render(){
+  /* ===== STATUS CAIXA ===== */
+  statusCaixa.innerText = db.caixa.aberto ? "🟢 Caixa aberto" : "🔴 Caixa fechado";
+  abrirBox.style.display = db.caixa.aberto ? "none" : "block";
 
-  let h = "<tr><th>Item</th><th>Valor</th></tr>";
-  let s = 0;
+  /* ===== SELECTS ===== */
+  produto.innerHTML = db.produtos
+    .map(p=>`<option value="${p.nome}|${p.valor}">${p.nome}</option>`)
+    .join("");
 
-  carrinho.forEach(i=>{
-    h += `<tr><td>${i.nome}</td><td>R$ ${i.valor.toFixed(2)}</td></tr>`;
-    s += i.valor;
-  });
+  cliente.innerHTML = db.clientes
+    .map(c=>`<option>${c.nome}</option>`)
+    .join("");
 
-  carrinhoElem.innerHTML = h;
-  total.innerText = s.toFixed(2);
+  clienteAgenda.innerHTML = cliente.innerHTML;
+
+  tipoPlano.innerHTML = db.produtos
+    .filter(p=>p.tipo==="servico")
+    .map(p=>`<option>${p.nome}</option>`)
+    .join("");
+
+  planoCliente.innerHTML =
+    `<option value="">Sem plano</option>` +
+    db.planos.map(p=>`<option>${p.nome}</option>`).join("");
+
+  servicoAgenda.innerHTML = tipoPlano.innerHTML;
+
+  horaAgenda.innerHTML = gerarHorarios15()
+    .map(h=>`<option>${h}</option>`)
+    .join("");
+
+  /* ===== LISTAS ===== */
+  listaProdutos.innerHTML = db.produtos
+    .map(p=>`<li>${p.nome} (${p.tipo}) - R$ ${p.valor.toFixed(2)}</li>`)
+    .join("");
+
+  listaClientes.innerHTML = db.clientes
+    .map(c=>`
+      <li>
+        ${c.nome}
+        ${c.plano ? `| Plano: ${c.plano.nome} (${c.plano.saldo})` : ""}
+      </li>
+    `).join("");
+
+  listaPlanos.innerHTML = db.planos
+    .map(p=>`<li>${p.nome} - ${p.qtd}x ${p.servico} (R$ ${p.valor.toFixed(2)})</li>`)
+    .join("");
+
+  listaDespesas.innerHTML = db.despesas
+    .map(d=>`
+      <li>
+        ${d.desc} - R$ ${d.valor.toFixed(2)}
+        <small>(${new Date(d.data).toLocaleDateString()})</small>
+      </li>
+    `).join("");
+
+  listaAgenda.innerHTML = db.agenda
+    .filter(a=>!dataAgenda.value || a.data===dataAgenda.value)
+    .map((a,i)=>`
+      <li>
+        ${a.data} ${a.hora} | ${a.cliente} | ${a.servico}
+        <button onclick="removerAgendamento(${i})">✏️</button>
+      </li>
+    `).join("");
+
+  /* ===== RESUMO CAIXA ===== */
+  const totalCaixa =
+    db.caixa.dinheiro +
+    db.caixa.pix +
+    db.caixa.cartao;
+
+  resumoCaixa.innerHTML = `
+    💰 Dinheiro: R$ ${db.caixa.dinheiro.toFixed(2)}<br>
+    📲 Pix: R$ ${db.caixa.pix.toFixed(2)}<br>
+    💳 Cartão: R$ ${db.caixa.cartao.toFixed(2)}<br>
+    <b>Total: R$ ${totalCaixa.toFixed(2)}</b>
+  `;
 }
 function render(){
   statusCaixa.innerText=db.caixa.aberto?"🟢 Caixa aberto":"🔴 Caixa fechado";
