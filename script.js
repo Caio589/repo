@@ -2,8 +2,17 @@ const { jsPDF } = window.jspdf;
 
 /* ===== BASE ===== */
 function show(id){
-  document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
-  document.getElementById(id).classList.add("active");
+  document.querySelectorAll(".section").forEach(s=>{
+    if(s) s.classList.remove("active");
+  });
+
+  const tela = document.getElementById(id);
+  if(!tela){
+    console.warn("Tela não encontrada:", id);
+    return;
+  }
+
+  tela.classList.add("active");
 }
 
 const db = JSON.parse(localStorage.getItem("db")) || {
