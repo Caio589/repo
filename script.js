@@ -129,3 +129,15 @@ function render(){
     <b>Total Geral: R$ ${totalCaixa.toFixed(2)}</b>
   `;
 }
+/* ===== GARANTIA DE FUNÇÕES GLOBAIS ===== */
+window.salvarProduto = salvarProduto;
+window.salvarPlano = salvarPlano;
+window.salvarCliente = salvarCliente;
+window.salvarDespesa = salvarDespesa;
+window.salvarAgendamento = salvarAgendamento;
+window.addItem = addItem;
+window.finalizarVenda = finalizarVenda;
+window.fecharCaixa = fecharCaixa;
+window.usarPlano = usarPlano;
+window.gerarRelatorioMensal = gerarRelatorioMensal;
+window.show = show;
