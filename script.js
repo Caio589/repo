@@ -1,6 +1,7 @@
 let caixa = JSON.parse(localStorage.getItem("caixa")) || null;
 let clientes = JSON.parse(localStorage.getItem("clientes")) || [];
 let servicos = JSON.parse(localStorage.getItem("servicos")) || [];
+let planos = JSON.parse(localStorage.getItem("planos")) || [];
 
 function entrarSistema(){
   document.getElementById("splash").style.display = "none";
@@ -19,38 +20,66 @@ function abrirTela(id){
   document.getElementById(id).classList.add("ativa");
 }
 
-/* SISTEMA */
+/* PLANOS */
+function cadastrarPlano(){
+  planos.push({
+    nome:nomePlano.value,
+    total:+qtdPlano.value,
+    valor:+valorPlano.value
+  });
+  localStorage.setItem("planos",JSON.stringify(planos));
+  render();
+}
+
+/* CLIENTES */
+function cadastrarCliente(){
+  const p = planos[planoCliente.value];
+  clientes.push({
+    nome:nomeCliente.value,
+    plano: p ? { nome:p.nome, total:p.total, usados:0 } : null
+  });
+  localStorage.setItem("clientes",JSON.stringify(clientes));
+  render();
+}
+
+/* SERVIÇOS */
+function cadastrarServico(){
+  servicos.push({ nome:nomeServico.value, preco:+precoServico.value });
+  localStorage.setItem("servicos",JSON.stringify(servicos));
+  render();
+}
+
+/* CAIXA */
 function abrirCaixa(){
   caixa = { valorInicial:+valorInicial.value, vendas:[] };
   salvar();
   render();
 }
 
-function cadastrarCliente(){
-  clientes.push({ nome:nomeCliente.value });
-  nomeCliente.value="";
-  localStorage.setItem("clientes",JSON.stringify(clientes));
-  render();
-}
-
-function cadastrarServico(){
-  servicos.push({ nome:nomeServico.value, preco:+precoServico.value });
-  nomeServico.value=precoServico.value="";
-  localStorage.setItem("servicos",JSON.stringify(servicos));
-  render();
-}
-
 function registrarVenda(){
   const c = clientes[clienteVenda.value];
   const s = servicos[servicoVenda.value];
-  caixa.vendas.push({ cliente:c.nome, servico:s.nome, valor:s.preco });
+
+  let valor = s.preco;
+
+  if(c.plano){
+    if(c.plano.usados >= c.plano.total){
+      alert("Plano esgotado");
+      return;
+    }
+    c.plano.usados++;
+    valor = 0;
+  }
+
+  caixa.vendas.push({ cliente:c.nome, servico:s.nome, valor });
   salvar();
+  localStorage.setItem("clientes",JSON.stringify(clientes));
   render();
 }
 
 function fecharCaixa(){
   localStorage.removeItem("caixa");
-  caixa=null;
+  caixa = null;
   render();
 }
 
@@ -59,11 +88,22 @@ function salvar(){
 }
 
 function render(){
+  /* selects */
   clienteVenda.innerHTML="";
-  clientes.forEach((c,i)=>clienteVenda.innerHTML+=`<option value="${i}">${c.nome}</option>`);
+  clientes.forEach((c,i)=>{
+    let info = c.plano ? `(${c.plano.total-c.plano.usados})` : "";
+    clienteVenda.innerHTML += `<option value="${i}">${c.nome} ${info}</option>`;
+  });
 
   servicoVenda.innerHTML="";
-  servicos.forEach((s,i)=>servicoVenda.innerHTML+=`<option value="${i}">${s.nome}</option>`);
+  servicos.forEach((s,i)=>{
+    servicoVenda.innerHTML += `<option value="${i}">${s.nome}</option>`;
+  });
+
+  planoCliente.innerHTML=`<option value="">Sem plano</option>`;
+  planos.forEach((p,i)=>{
+    planoCliente.innerHTML += `<option value="${i}">${p.nome}</option>`;
+  });
 
   if(!caixa) return;
   const total = caixa.vendas.reduce((s,v)=>s+v.valor,0);
