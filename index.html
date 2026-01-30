@@ -5,22 +5,8 @@
 <title>PDV Barbearia</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<link rel="stylesheet" href="style.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
-<style>
-body{margin:0;font-family:Arial;background:url("https://images.unsplash.com/photo-1503951914875-452162b0f3f1");background-size:cover;background-position:center}
-.overlay{background:rgba(0,0,0,.72);min-height:100vh}
-.menu{position:fixed;left:0;top:0;bottom:0;width:70px;background:rgba(0,0,0,.45);display:flex;flex-direction:column;align-items:center;padding-top:20px}
-.menu button{background:none;border:none;color:#f1c40f;font-size:22px;margin:15px 0;cursor:pointer}
-.content{margin-left:90px;padding:20px;color:#fff}
-.section{display:none}.section.active{display:block}
-input,select,button{padding:8px;border-radius:6px;border:none;margin:4px 0}
-button{cursor:pointer;font-weight:bold}
-.total{font-size:20px;color:#2ecc71}
-.hidden{display:none}
-table{width:100%;margin-top:10px}
-th,td{padding:6px;text-align:left}
-</style>
 </head>
 
 <body>
@@ -28,11 +14,6 @@ th,td{padding:6px;text-align:left}
 
 <div class="menu">
   <button onclick="show('pdv')">💈</button>
-  <button onclick="show('agenda')">🕒</button>
-  <button onclick="show('clientes')">👤</button>
-  <button onclick="show('planos')">💳</button>
-  <button onclick="show('produtos')">📦</button>
-  <button onclick="show('despesas')">🧾</button>
   <button onclick="show('mensal')">📆</button>
 </div>
 
@@ -47,7 +28,6 @@ th,td{padding:6px;text-align:left}
     <button onclick="abrirCaixa()">Abrir Caixa</button>
   </div>
 
-  <select id="cliente"></select>
   <select id="produto"></select>
 
   <select id="pagamento">
@@ -62,11 +42,10 @@ th,td{padding:6px;text-align:left}
   <button onclick="addItem()">Adicionar</button>
 
   <table id="carrinho"></table>
-
   <p class="total">Total: R$ <span id="total">0.00</span></p>
 
   <button onclick="finalizarVenda()">Finalizar Venda</button>
-  <button onclick="fecharCaixa()" style="background:#e74c3c;color:#fff">Fechar Caixa</button>
+  <button onclick="fecharCaixa()" class="btn-danger">Fechar Caixa</button>
 
   <div id="resumoCaixa"></div>
 </div>
@@ -74,139 +53,13 @@ th,td{padding:6px;text-align:left}
 <div id="mensal" class="section">
   <h2>Relatório Mensal</h2>
   <input type="month" id="mesRelatorio">
-  <button onclick="gerarRelatorioMensal()">Gerar</button>
+  <button onclick="gerarRelatorioMensal()">Gerar PDF Mensal</button>
   <div id="resumoMensal"></div>
 </div>
 
 </div>
 </div>
 
-<script>
-const { jsPDF } = window.jspdf;
-
-function show(id){
-  document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
-  document.getElementById(id).classList.add("active");
-}
-
-const db = JSON.parse(localStorage.getItem("db")) || {
-  clientes:[], produtos:[], vendas:[], despesas:[],
-  caixa:{aberto:false,abertura:0,dinheiro:0,pix:0,cartao:0}
-};
-
-let carrinho=[];
-function save(){localStorage.setItem("db",JSON.stringify(db))}
-
-function abrirCaixa(){
-  db.caixa.aberto=true;
-  db.caixa.abertura=+valorAbertura.value||0;
-  save(); render();
-}
-
-function addItem(){
-  if(!produto.value) return;
-  const [nome,valor]=produto.value.split("|");
-  carrinho.push({nome,valor:+valor||0});
-  renderCarrinho();
-}
-
-function finalizarVenda(){
-  if(!db.caixa.aberto) return alert("Caixa fechado");
-  if(carrinho.length===0) return alert("Carrinho vazio");
-
-  const total=carrinho.reduce((s,i)=>s+i.valor,0);
-  const pago=+valorPago.value||0;
-
-  if(pagamento.value==="dinheiro"){
-    if(pago<total) return alert("Valor insuficiente");
-    db.caixa.dinheiro+=total;
-    trocoInfo.innerText=`Troco: R$ ${(pago-total).toFixed(2)}`;
-  }
-  if(pagamento.value==="pix") db.caixa.pix+=total;
-  if(pagamento.value==="cartao") db.caixa.cartao+=total;
-
-  db.vendas.push({data:new Date().toISOString(),total});
-  carrinho=[]; valorPago.value="";
-  save(); render();
-}
-
-function gerarPDFCaixa(){
-  const pdf=new jsPDF();
-  let y=20;
-
-  pdf.setFontSize(16);
-  pdf.text("Fechamento de Caixa",20,y); y+=10;
-
-  pdf.setFontSize(11);
-  pdf.text(`Data: ${new Date().toLocaleString()}`,20,y); y+=10;
-  pdf.text(`Abertura: R$ ${db.caixa.abertura.toFixed(2)}`,20,y); y+=8;
-  pdf.text(`Dinheiro: R$ ${db.caixa.dinheiro.toFixed(2)}`,20,y); y+=8;
-  pdf.text(`Pix: R$ ${db.caixa.pix.toFixed(2)}`,20,y); y+=8;
-  pdf.text(`Cartão: R$ ${db.caixa.cartao.toFixed(2)}`,20,y); y+=8;
-
-  pdf.save("fechamento_caixa.pdf");
-}
-
-function fecharCaixa(){
-  gerarPDFCaixa();
-  db.caixa.aberto=false;
-  db.caixa.dinheiro=0;
-  db.caixa.pix=0;
-  db.caixa.cartao=0;
-  save(); render();
-}
-
-function gerarRelatorioMensal(){
-  const [ano,mes]=mesRelatorio.value.split("-");
-  const vendasMes=db.vendas.filter(v=>{
-    const d=new Date(v.data);
-    return d.getFullYear()==ano && (d.getMonth()+1)==mes;
-  });
-
-  const total=vendasMes.reduce((s,v)=>s+v.total,0);
-  resumoMensal.innerHTML=`<p>Total do mês: R$ ${total.toFixed(2)}</p>`;
-
-  const pdf=new jsPDF();
-  let y=20;
-  pdf.setFontSize(16);
-  pdf.text("Relatório Mensal",20,y); y+=10;
-  pdf.text(`Mês/Ano: ${mes}/${ano}`,20,y); y+=10;
-
-  vendasMes.forEach(v=>{
-    pdf.text(`Venda: R$ ${v.total.toFixed(2)}`,20,y);
-    y+=7;
-  });
-
-  pdf.text(`Total do mês: R$ ${total.toFixed(2)}`,20,y+5);
-  pdf.save("relatorio_mensal.pdf");
-}
-
-function renderCarrinho(){
-  let h="<tr><th>Item</th><th>Valor</th></tr>",s=0;
-  carrinho.forEach(i=>{
-    h+=`<tr><td>${i.nome}</td><td>R$ ${i.valor.toFixed(2)}</td></tr>`;
-    s+=i.valor;
-  });
-  carrinho.innerHTML=h;
-  total.innerText=s.toFixed(2);
-}
-
-function render(){
-  statusCaixa.innerText=db.caixa.aberto?"🟢 Caixa aberto":"🔴 Caixa fechado";
-  abrirBox.classList.toggle("hidden",db.caixa.aberto);
-
-  produto.innerHTML=db.produtos.map(p=>
-    `<option value="${p.nome}|${p.valor}">${p.nome}</option>`
-  ).join("");
-
-  resumoCaixa.innerHTML=`
-  <p>💰 Dinheiro: R$ ${db.caixa.dinheiro.toFixed(2)}</p>
-  <p>📲 Pix: R$ ${db.caixa.pix.toFixed(2)}</p>
-  <p>💳 Cartão: R$ ${db.caixa.cartao.toFixed(2)}</p>`;
-}
-
-render();
-</script>
-
+<script src="script.js"></script>
 </body>
 </html>
