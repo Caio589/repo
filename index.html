@@ -4,22 +4,25 @@
 <meta charset="UTF-8">
 <title>Sistema Profissional de Barbearia</title>
 <link rel="stylesheet" href="style.css">
+
+<!-- jsPDF -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<!-- Chart.js (GRÁFICO FUNCIONAL) -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
-<!-- PATCH SPLASH -->
+<!-- SPLASH FIXO -->
 <script>
-  function entrarSistema(){
-    const s=document.getElementById("splash");
-    if(s) s.style.display="none";
-    localStorage.setItem("splash_ok","1");
-  }
+function entrarSistema(){
+  document.getElementById("splash").style.display="none";
+  localStorage.setItem("splash_ok","1");
+}
 </script>
 
 <div id="toast" class="toast"></div>
 
-<!-- SPLASH -->
 <div id="splash" class="splash">
   <div class="splash-overlay"></div>
   <div class="splash-box">
@@ -42,7 +45,6 @@
     <button onclick="abrirTela('relatorios')">📊</button>
   </nav>
 
-  <!-- CONTEÚDO -->
   <main class="content">
 
     <!-- VENDAS -->
@@ -52,8 +54,6 @@
         <select id="clienteVenda"></select>
         <select id="servicoVenda"></select>
         <button onclick="registrarVenda()">Registrar</button>
-
-        <h3>Vendas</h3>
         <ul id="listaVendas"></ul>
       </div>
     </section>
@@ -74,7 +74,7 @@
       <div class="card">
         <h2>Planos Mensais</h2>
         <input id="nomePlano" placeholder="Nome do plano">
-        <input id="qtdPlano" type="number" placeholder="Qtd de cortes">
+        <input id="qtdPlano" type="number" placeholder="Qtd cortes">
         <input id="valorPlano" type="number" placeholder="Valor mensal">
         <button onclick="cadastrarPlano()">Cadastrar Plano</button>
         <ul id="listaPlanos"></ul>
@@ -112,20 +112,18 @@
       </div>
 
       <div class="card">
-        <h2>Resumo</h2>
         <p>Inicial: R$ <span id="resInicial">0</span></p>
         <p>Vendas: R$ <span id="resVendas">0</span></p>
         <p><strong>Total: R$ <span id="resTotal">0</span></strong></p>
         <button onclick="gerarPDF()">📄 PDF</button>
-        <button class="fechar" onclick="fecharCaixa()">Encerrar Caixa</button>
       </div>
     </section>
 
-    <!-- RELATÓRIOS -->
+    <!-- RELATÓRIO MENSAL -->
     <section id="relatorios" class="tela">
       <div class="card">
-        <h2>Relatório de Planos</h2>
-        <div id="relatorioPlanos"></div>
+        <h2>Relatório Mensal</h2>
+        <canvas id="graficoMensal"></canvas>
       </div>
     </section>
 
