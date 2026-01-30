@@ -3,7 +3,8 @@ const { jsPDF } = window.jspdf;
 /* ===== BASE ===== */
 function show(id){
   document.querySelectorAll(".section").forEach(s=>{
-    if(s) s.classList.remove("active");
+    s.classList.remove("active");
+    s.style.display = "none"; // força esconder
   });
 
   const tela = document.getElementById(id);
@@ -11,6 +12,10 @@ function show(id){
     console.warn("Tela não encontrada:", id);
     return;
   }
+
+  tela.classList.add("active");
+  tela.style.display = "block"; // força aparecer
+}
 
   tela.classList.add("active");
 }
