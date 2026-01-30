@@ -1,39 +1,46 @@
 const { jsPDF } = window.jspdf;
 
-/* ===== BASE ===== */
+/* ================= BASE ================= */
 function show(id){
   document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
   document.getElementById(id).classList.add("active");
 }
 
 const db = JSON.parse(localStorage.getItem("db")) || {
-  clientes:[], planos:[], produtos:[],
-  vendas:[], despesas:[], agenda:[],
+  clientes:[],
+  planos:[],
+  produtos:[],
+  vendas:[],
+  despesas:[],
+  agenda:[],
   caixa:{aberto:false,abertura:0,dinheiro:0,pix:0,cartao:0}
 };
 
-/* blindagem */
+/* blindagem total */
 db.caixa.abertura ||= 0;
 db.caixa.dinheiro ||= 0;
 db.caixa.pix ||= 0;
 db.caixa.cartao ||= 0;
 
 let carrinho=[];
-function save(){localStorage.setItem("db",JSON.stringify(db))}
+function save(){ localStorage.setItem("db", JSON.stringify(db)); }
 
-/* ===== AGENDA ===== */
+/* ================= AGENDA ================= */
 function gerarHorarios15(){
   let h=[];
   for(let i=8;i<=20;i++){
-    ["00","15","30","45"].forEach(m=>h.push(`${String(i).padStart(2,"0")}:${m}`));
+    ["00","15","30","45"].forEach(m=>{
+      h.push(`${String(i).padStart(2,"0")}:${m}`);
+    });
   }
   return h;
 }
 
 function salvarAgendamento(){
-  if(db.agenda.find(a=>a.data===dataAgenda.value && a.hora===horaAgenda.value))
-    return alert("Horário ocupado");
-
+  if(db.agenda.find(a=>a.data===dataAgenda.value && a.hora===horaAgenda.value)){
+    alert("Horário ocupado");
+    return;
+  }
   db.agenda.push({
     data:dataAgenda.value,
     hora:horaAgenda.value,
@@ -43,9 +50,9 @@ function salvarAgendamento(){
   save(); render();
 }
 
-/* ===== CLIENTES ===== */
+/* ================= CLIENTES ================= */
 function salvarCliente(){
-  const plano=db.planos.find(p=>p.nome===planoCliente.value);
+  const plano = db.planos.find(p=>p.nome===planoCliente.value);
   db.clientes.push({
     nome:nomeCliente.value,
     plano:plano?plano.nome:null,
@@ -54,7 +61,7 @@ function salvarCliente(){
   save(); render();
 }
 
-/* ===== PLANOS ===== */
+/* ================= PLANOS ================= */
 function salvarPlano(){
   db.planos.push({
     nome:nomePlano.value,
@@ -65,7 +72,7 @@ function salvarPlano(){
   save(); render();
 }
 
-/* ===== PRODUTOS ===== */
+/* ================= PRODUTOS ================= */
 function salvarProduto(){
   db.produtos.push({
     nome:nomeProd.value,
@@ -75,7 +82,7 @@ function salvarProduto(){
   save(); render();
 }
 
-/* ===== DESPESAS ===== */
+/* ================= DESPESAS ================= */
 function salvarDespesa(){
   db.despesas.push({
     desc:descDespesa.value,
@@ -85,7 +92,7 @@ function salvarDespesa(){
   save(); render();
 }
 
-/* ===== CAIXA ===== */
+/* ================= CAIXA / PDV ================= */
 function abrirCaixa(){
   db.caixa.aberto=true;
   db.caixa.abertura=+valorAbertura.value||0;
@@ -118,7 +125,7 @@ function finalizarVenda(){
   save(); render();
 }
 
-/* ===== PDF CAIXA ===== */
+/* ================= PDF CAIXA ================= */
 function gerarPDFCaixa(){
   const pdf=new jsPDF();
   let y=20;
@@ -134,11 +141,13 @@ function gerarPDFCaixa(){
 function fecharCaixa(){
   gerarPDFCaixa();
   db.caixa.aberto=false;
-  db.caixa.dinheiro=db.caixa.pix=db.caixa.cartao=0;
+  db.caixa.dinheiro=0;
+  db.caixa.pix=0;
+  db.caixa.cartao=0;
   save(); render();
 }
 
-/* ===== PDF MENSAL ===== */
+/* ================= PDF MENSAL ================= */
 function gerarRelatorioMensal(){
   const [ano,mes]=mesRelatorio.value.split("-");
   const vendas=db.vendas.filter(v=>{
@@ -146,19 +155,21 @@ function gerarRelatorioMensal(){
     return d.getFullYear()==ano && d.getMonth()+1==mes;
   });
   const total=vendas.reduce((s,v)=>s+v.total,0);
-  resumoMensal.innerHTML=`Total: R$ ${total.toFixed(2)}`;
+
+  resumoMensal.innerHTML=`Total do mês: R$ ${total.toFixed(2)}`;
 
   const pdf=new jsPDF();
   let y=20;
   pdf.text(`Relatório ${mes}/${ano}`,20,y); y+=10;
   vendas.forEach(v=>{
-    pdf.text(`Venda: R$ ${v.total.toFixed(2)}`,20,y); y+=7;
+    pdf.text(`Venda: R$ ${v.total.toFixed(2)}`,20,y);
+    y+=7;
   });
   pdf.text(`Total: R$ ${total.toFixed(2)}`,20,y+5);
   pdf.save("relatorio_mensal.pdf");
 }
 
-/* ===== RENDER ===== */
+/* ================= RENDER ================= */
 function renderCarrinho(){
   let h="<tr><th>Item</th><th>Valor</th></tr>",s=0;
   carrinho.forEach(i=>{
