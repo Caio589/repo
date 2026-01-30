@@ -4,8 +4,6 @@
 <meta charset="UTF-8">
 <title>Sistema Profissional de Barbearia</title>
 <link rel="stylesheet" href="style.css">
-
-<!-- jsPDF -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
@@ -29,7 +27,6 @@
   <nav class="menu">
     <button onclick="abrirTela('vendas')">💈</button>
     <button onclick="abrirTela('clientes')">👤</button>
-    <button onclick="abrirTela('planos')">📦</button>
     <button onclick="abrirTela('servicos')">✂️</button>
     <button onclick="abrirTela('produtos')">🧴</button>
     <button onclick="abrirTela('caixa')">💰</button>
@@ -43,12 +40,12 @@
     <section id="vendas" class="tela ativa vendas-bg">
       <div class="card transparente">
         <h2>Registrar Venda</h2>
-
         <select id="clienteVenda"></select>
-
         <select id="servicoVenda"></select>
-
         <button onclick="registrarVenda()">Registrar Venda</button>
+
+        <h3>Vendas do dia</h3>
+        <ul id="listaVendas"></ul>
       </div>
     </section>
 
@@ -56,27 +53,9 @@
     <section id="clientes" class="tela">
       <div class="card">
         <h2>Clientes</h2>
-
         <input id="nomeCliente" placeholder="Nome do cliente">
-
-        <select id="planoCliente">
-          <option value="">Sem plano</option>
-        </select>
-
-        <button onclick="cadastrarCliente()">Cadastrar Cliente</button>
-      </div>
-    </section>
-
-    <!-- PLANOS -->
-    <section id="planos" class="tela">
-      <div class="card">
-        <h2>Planos</h2>
-
-        <input id="nomePlano" placeholder="Nome do plano">
-        <input id="qtdPlano" type="number" placeholder="Qtd de cortes">
-        <input id="valorPlano" type="number" placeholder="Valor do plano">
-
-        <button onclick="cadastrarPlano()">Cadastrar Plano</button>
+        <button onclick="cadastrarCliente()">Cadastrar</button>
+        <ul id="listaClientes"></ul>
       </div>
     </section>
 
@@ -84,11 +63,10 @@
     <section id="servicos" class="tela">
       <div class="card">
         <h2>Serviços</h2>
-
-        <input id="nomeServico" placeholder="Nome do serviço">
+        <input id="nomeServico" placeholder="Serviço">
         <input id="precoServico" type="number" placeholder="Preço">
-
-        <button onclick="cadastrarServico()">Cadastrar Serviço</button>
+        <button onclick="cadastrarServico()">Cadastrar</button>
+        <ul id="listaServicos"></ul>
       </div>
     </section>
 
@@ -96,11 +74,10 @@
     <section id="produtos" class="tela">
       <div class="card">
         <h2>Produtos</h2>
-
-        <input id="nomeProduto" placeholder="Nome do produto">
+        <input id="nomeProduto" placeholder="Produto">
         <input id="precoProduto" type="number" placeholder="Preço">
-
-        <button onclick="cadastrarProduto()">Cadastrar Produto</button>
+        <button onclick="cadastrarProduto()">Cadastrar</button>
+        <ul id="listaProdutos"></ul>
       </div>
     </section>
 
@@ -108,20 +85,16 @@
     <section id="caixa" class="tela">
       <div class="card">
         <h2>Abertura de Caixa</h2>
-
         <input id="valorInicial" type="number" placeholder="Valor inicial">
-
         <button onclick="abrirCaixa()">Abrir Caixa</button>
       </div>
 
       <div class="card">
-        <h2>Resumo do Caixa</h2>
-
-        <p>Inicial: R$ <span id="resInicial">0.00</span></p>
-        <p>Vendas: R$ <span id="resVendas">0.00</span></p>
-        <p><strong>Total: R$ <span id="resTotal">0.00</span></strong></p>
-
-        <button onclick="gerarPDF()">📄 Fechar Caixa (PDF)</button>
+        <h2>Resumo</h2>
+        <p>Inicial: R$ <span id="resInicial">0</span></p>
+        <p>Vendas: R$ <span id="resVendas">0</span></p>
+        <p><strong>Total: R$ <span id="resTotal">0</span></strong></p>
+        <button onclick="gerarPDF()">📄 PDF</button>
         <button class="fechar" onclick="fecharCaixa()">Encerrar Caixa</button>
       </div>
     </section>
@@ -130,12 +103,10 @@
     <section id="relatorios" class="tela">
       <div class="card">
         <h2>Relatórios</h2>
-
-        <button onclick="relatorio('dia')">📅 Diário</button>
-        <button onclick="relatorio('semana')">📆 Semanal</button>
-        <button onclick="relatorio('mes')">🗓️ Mensal</button>
-
-        <div id="resultadoRelatorio" style="margin-top:15px;"></div>
+        <button onclick="relatorio(1)">📅 Diário</button>
+        <button onclick="relatorio(7)">📆 Semanal</button>
+        <button onclick="relatorio(30)">🗓️ Mensal</button>
+        <div id="resultadoRelatorio"></div>
       </div>
     </section>
 
