@@ -1,16 +1,18 @@
-/* ================== BASE ================== */
+/* ========= CONTROLE DE TELAS ========= */
 function show(id){
-  document.querySelectorAll(".section").forEach(s=>{
-    s.classList.remove("active");
-    s.style.display = "none";
+  document.querySelectorAll(".section").forEach(sec=>{
+    sec.classList.remove("active");
+    sec.style.display = "none";
   });
+
   const tela = document.getElementById(id);
   if(!tela) return;
+
   tela.classList.add("active");
   tela.style.display = "block";
 }
 
-/* ================== DB ================== */
+/* ========= BANCO LOCAL ========= */
 const db = JSON.parse(localStorage.getItem("db")) || {
   clientes:[],
   planos:[],
@@ -32,7 +34,7 @@ function save(){
   localStorage.setItem("db", JSON.stringify(db));
 }
 
-/* ================== CAIXA ================== */
+/* ========= CAIXA ========= */
 function abrirCaixa(){
   db.caixa.aberto = true;
   db.caixa.abertura = Number(valorAbertura.value) || 0;
@@ -49,7 +51,7 @@ function fecharCaixa(){
   render();
 }
 
-/* ================== PRODUTOS ================== */
+/* ========= PRODUTOS ========= */
 function salvarProduto(){
   db.produtos.push({
     nome: nomeProd.value,
@@ -60,7 +62,7 @@ function salvarProduto(){
   render();
 }
 
-/* ================== CLIENTES ================== */
+/* ========= CLIENTES ========= */
 function salvarCliente(){
   db.clientes.push({
     nome: nomeCliente.value
@@ -69,7 +71,7 @@ function salvarCliente(){
   render();
 }
 
-/* ================== PLANOS ================== */
+/* ========= PLANOS ========= */
 function salvarPlano(){
   db.planos.push({
     nome: nomePlano.value,
@@ -81,7 +83,7 @@ function salvarPlano(){
   render();
 }
 
-/* ================== DESPESAS ================== */
+/* ========= DESPESAS ========= */
 function salvarDespesa(){
   db.despesas.push({
     desc: descDespesa.value,
@@ -92,12 +94,11 @@ function salvarDespesa(){
   render();
 }
 
-/* ================== RENDER ================== */
+/* ========= RENDER ========= */
 function render(){
   statusCaixa.innerText = db.caixa.aberto ? "🟢 Caixa aberto" : "🔴 Caixa fechado";
   abrirBox.style.display = db.caixa.aberto ? "none" : "block";
 
-  /* produtos */
   produto.innerHTML = db.produtos.map(p =>
     `<option value="${p.nome}|${p.valor}">${p.nome}</option>`
   ).join("");
@@ -106,7 +107,6 @@ function render(){
     `<li>${p.nome} - R$ ${p.valor}</li>`
   ).join("");
 
-  /* clientes */
   cliente.innerHTML = db.clientes.map(c =>
     `<option>${c.nome}</option>`
   ).join("");
@@ -115,18 +115,16 @@ function render(){
     `<li>${c.nome}</li>`
   ).join("");
 
-  /* planos */
   listaPlanos.innerHTML = db.planos.map(p =>
     `<li>${p.nome} (${p.qtd}x)</li>`
   ).join("");
 
-  /* despesas */
   listaDespesas.innerHTML = db.despesas.map(d =>
     `<li>${d.desc} - R$ ${d.valor}</li>`
   ).join("");
 }
 
-/* ================== EXPOR FUNÇÕES ================== */
+/* ========= EXPOR FUNÇÕES ========= */
 window.show = show;
 window.abrirCaixa = abrirCaixa;
 window.fecharCaixa = fecharCaixa;
@@ -135,5 +133,5 @@ window.salvarCliente = salvarCliente;
 window.salvarPlano = salvarPlano;
 window.salvarDespesa = salvarDespesa;
 
-/* ================== INIT ================== */
+/* ========= START ========= */
 render();
