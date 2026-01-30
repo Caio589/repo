@@ -2,14 +2,26 @@ let caixa = JSON.parse(localStorage.getItem("caixa")) || null;
 let clientes = JSON.parse(localStorage.getItem("clientes")) || [];
 let servicos = JSON.parse(localStorage.getItem("servicos")) || [];
 let produtos = JSON.parse(localStorage.getItem("produtos")) || [];
-let planos = JSON.parse(localStorage.getItem("planos")) || [];
+
+/* SPLASH */
+function entrarSistema(){
+  document.getElementById("splash").style.display = "none";
+  localStorage.setItem("splash_ok","1");
+}
+
+window.onload = () => {
+  if(localStorage.getItem("splash_ok")){
+    document.getElementById("splash").style.display = "none";
+  }
+  render();
+};
 
 /* TOAST */
 function toast(msg, erro=false){
-  const t = document.getElementById("toast");
-  t.innerText = msg;
-  t.className = "toast" + (erro ? " erro" : "");
-  t.style.display = "block";
+  const t=document.getElementById("toast");
+  t.innerText=msg;
+  t.className="toast"+(erro?" erro":"");
+  t.style.display="block";
   setTimeout(()=>t.style.display="none",3000);
 }
 
@@ -21,48 +33,50 @@ function abrirTela(id){
 
 /* CADASTROS */
 function cadastrarCliente(){
-  if(!nomeCliente.value) return toast("Informe o nome",true);
-  clientes.push({ nome:nomeCliente.value, plano:null });
+  if(!nomeCliente.value) return toast("Nome obrigatório",true);
+  clientes.push({nome:nomeCliente.value});
   localStorage.setItem("clientes",JSON.stringify(clientes));
   nomeCliente.value="";
-  toast("Cliente cadastrado com sucesso");
+  toast("Cliente cadastrado");
   render();
 }
 
 function cadastrarServico(){
-  servicos.push({ nome:nomeServico.value, preco:+precoServico.value });
+  servicos.push({nome:nomeServico.value,preco:+precoServico.value});
   localStorage.setItem("servicos",JSON.stringify(servicos));
   nomeServico.value=precoServico.value="";
-  toast("Serviço cadastrado com sucesso");
+  toast("Serviço cadastrado");
   render();
 }
 
 function cadastrarProduto(){
-  produtos.push({ nome:nomeProduto.value, preco:+precoProduto.value });
+  produtos.push({nome:nomeProduto.value,preco:+precoProduto.value});
   localStorage.setItem("produtos",JSON.stringify(produtos));
   nomeProduto.value=precoProduto.value="";
-  toast("Produto cadastrado com sucesso");
+  toast("Produto cadastrado");
+  render();
 }
 
 /* CAIXA */
 function abrirCaixa(){
-  caixa={ valorInicial:+valorInicial.value, vendas:[] };
+  caixa={valorInicial:+valorInicial.value,vendas:[]};
   localStorage.setItem("caixa",JSON.stringify(caixa));
   toast("Caixa aberto");
   render();
 }
 
 function registrarVenda(){
-  const c = clientes[clienteVenda.value];
-  const s = servicos[servicoVenda.value];
+  if(!caixa) return toast("Abra o caixa",true);
+  const c=clientes[clienteVenda.value];
+  const s=servicos[servicoVenda.value];
   caixa.vendas.push({
-    tipo:"servico",
-    nome:s.nome,
+    cliente:c.nome,
+    servico:s.nome,
     valor:s.preco,
     data:new Date()
   });
   localStorage.setItem("caixa",JSON.stringify(caixa));
-  toast("Venda realizada com sucesso");
+  toast("Venda realizada");
   render();
 }
 
@@ -73,43 +87,39 @@ function fecharCaixa(){
   render();
 }
 
-/* RELATÓRIOS */
-function relatorio(tipo){
-  const agora = new Date();
-  let total = 0, qtd = 0;
-
-  caixa?.vendas.forEach(v=>{
-    const d = new Date(v.data);
-    const diff = (agora - d)/(1000*60*60*24);
-
-    if(
-      (tipo==="dia" && diff<=1) ||
-      (tipo==="semana" && diff<=7) ||
-      (tipo==="mes" && diff<=30)
-    ){
+/* RELATÓRIO */
+function relatorio(dias){
+  if(!caixa) return;
+  const agora=new Date();
+  let total=0,qtd=0;
+  caixa.vendas.forEach(v=>{
+    if((agora-new Date(v.data))/(1000*60*60*24)<=dias){
       total+=v.valor;
       qtd++;
     }
   });
-
-  resultadoRelatorio.innerHTML = `
-    <p>Vendas: ${qtd}</p>
-    <p>Total: R$ ${total.toFixed(2)}</p>
-  `;
+  resultadoRelatorio.innerHTML=
+    `<p>Vendas: ${qtd}</p><p>Total: R$ ${total.toFixed(2)}</p>`;
 }
 
 /* RENDER */
 function render(){
+  clienteVenda.innerHTML=clientes.map((c,i)=>`<option value="${i}">${c.nome}</option>`).join("");
+  listaClientes.innerHTML=clientes.map(c=>`<li>${c.nome}</li>`).join("");
+
+  servicoVenda.innerHTML=servicos.map((s,i)=>`<option value="${i}">${s.nome}</option>`).join("");
+  listaServicos.innerHTML=servicos.map(s=>`<li>${s.nome} - R$${s.preco}</li>`).join("");
+
+  listaProdutos.innerHTML=produtos.map(p=>`<li>${p.nome} - R$${p.preco}</li>`).join("");
+
   if(!caixa) return;
 
-  clienteVenda.innerHTML="";
-  clientes.forEach((c,i)=>clienteVenda.innerHTML+=`<option value="${i}">${c.nome}</option>`);
+  listaVendas.innerHTML=caixa.vendas.map(v=>
+    `<li>${v.cliente} - ${v.servico} R$${v.valor}</li>`
+  ).join("");
 
-  servicoVenda.innerHTML="";
-  servicos.forEach((s,i)=>servicoVenda.innerHTML+=`<option value="${i}">${s.nome}</option>`);
-
-  const total = caixa.vendas.reduce((s,v)=>s+v.valor,0);
-  resInicial.innerText=caixa.valorInicial.toFixed(2);
+  const total=caixa.vendas.reduce((s,v)=>s+v.valor,0);
+  resInicial.innerText=caixa.valorInicial;
   resVendas.innerText=total.toFixed(2);
   resTotal.innerText=(total+caixa.valorInicial).toFixed(2);
 }
