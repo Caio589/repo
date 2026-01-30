@@ -1,32 +1,46 @@
-body{
-  margin:0;
-  font-family:Arial;
-  background:url("https://images.unsplash.com/photo-1503951914875-452162b0f3f1");
-  background-size:cover;
-  background-position:center
+let caixa = JSON.parse(localStorage.getItem("caixa")) || null;
+
+function abrirCaixa() {
+  const valorInicial = parseFloat(document.getElementById("valorInicial").value);
+
+  if (isNaN(valorInicial) || valorInicial < 0) {
+    alert("Informe um valor inicial válido");
+    return;
+  }
+
+  caixa = {
+    aberto: true,
+    valorInicial: valorInicial,
+    dataAbertura: new Date().toLocaleString("pt-BR"),
+    vendas: []
+  };
+
+  localStorage.setItem("caixa", JSON.stringify(caixa));
+  render();
 }
 
-.overlay{background:rgba(0,0,0,.72);min-height:100vh}
-.menu{
-  position:fixed;left:0;top:0;bottom:0;width:70px;
-  background:rgba(0,0,0,.45);
-  display:flex;flex-direction:column;align-items:center;padding-top:20px
-}
-.menu button{
-  background:none;border:none;color:#f1c40f;
-  font-size:22px;margin:15px 0;cursor:pointer
-}
-.content{margin-left:90px;padding:20px;color:#fff}
-.section{display:none}
-.section.active{display:block}
+function fecharCaixa() {
+  if (!confirm("Deseja realmente fechar o caixa?")) return;
 
-input,select,button{
-  padding:8px;border-radius:6px;border:none;margin:4px 0
+  localStorage.removeItem("caixa");
+  caixa = null;
+  render();
 }
-button{cursor:pointer;font-weight:bold}
 
-.btn-danger{background:#e74c3c;color:#fff}
-.total{font-size:20px;color:#2ecc71}
+function render() {
+  const abertura = document.getElementById("aberturaCaixa");
+  const aberto = document.getElementById("caixaAberto");
 
-table{width:100%;margin-top:10px}
-th,td{padding:6px;text-align:left}
+  if (caixa && caixa.aberto) {
+    abertura.classList.add("hidden");
+    aberto.classList.remove("hidden");
+
+    document.getElementById("dataAbertura").innerText = caixa.dataAbertura;
+    document.getElementById("valorAbertura").innerText = caixa.valorInicial.toFixed(2);
+  } else {
+    abertura.classList.remove("hidden");
+    aberto.classList.add("hidden");
+  }
+}
+
+render();
