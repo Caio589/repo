@@ -73,12 +73,31 @@ function usarPlano(){
   c.plano.saldo--;save();render();
 }
 function finalizarVenda(){
-  const total=carrinho.reduce((s,i)=>s+i.valor,0);
-  if(pagamento.value==="dinheiro")db.caixa.dinheiro+=total;
-  if(pagamento.value==="pix")db.caixa.pix+=total;
-  if(pagamento.value==="cartao")db.caixa.cartao+=total;
-  db.vendas.push({data:new Date().toISOString(),total});
-  carrinho=[];save();render();
+  if(!db.caixa.aberto){
+    alert("Abra o caixa antes de realizar uma venda");
+    return;
+  }
+
+  if(carrinho.length === 0){
+    alert("Carrinho vazio");
+    return;
+  }
+
+  const total = carrinho.reduce((s,i)=>s+i.valor,0);
+
+  if(pagamento.value==="dinheiro") db.caixa.dinheiro += total;
+  if(pagamento.value==="pix") db.caixa.pix += total;
+  if(pagamento.value==="cartao") db.caixa.cartao += total;
+
+  db.vendas.push({
+    data:new Date().toISOString(),
+    total,
+    tipo:"venda"
+  });
+
+  carrinho = [];
+  save();
+  render();
 }
 
 /* ===== RELATÓRIO ===== */
