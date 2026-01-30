@@ -2,12 +2,13 @@
 function show(id){
   document.querySelectorAll(".section").forEach(s=>{
     s.classList.remove("active");
-    s.style.display="none";
+    s.style.display = "none";
   });
-  const tela=document.getElementById(id);
-  if(!tela) return;
-  tela.classList.add("active");
-  tela.style.display="block";
+  const tela = document.getElementById(id);
+  if(tela){
+    tela.classList.add("active");
+    tela.style.display = "block";
+  }
 }
 
 /* ================= DB ================= */
@@ -21,29 +22,24 @@ const db = JSON.parse(localStorage.getItem("db")) || {
   caixa:{aberto:false,abertura:0,dinheiro:0,pix:0,cartao:0}
 };
 
-db.caixa.abertura ||= 0;
-db.caixa.dinheiro ||= 0;
-db.caixa.pix ||= 0;
-db.caixa.cartao ||= 0;
-
 let carrinho = [];
-
-/* ===== ELEMENTOS DO DOM ===== */
-const carrinhoTable = document.getElementById("carrinho");
-const totalSpan = document.getElementById("total");
-const statusCaixaEl = document.getElementById("statusCaixa");
-const abrirBoxEl = document.getElementById("abrirBox");
-const resumoCaixaEl = document.getElementById("resumoCaixa");
-
-const listaProdutosEl = document.getElementById("listaProdutos");
-const listaClientesEl = document.getElementById("listaClientes");
-const listaPlanosEl = document.getElementById("listaPlanos");
-const listaDespesasEl = document.getElementById("listaDespesas");
-const listaAgendaEl = document.getElementById("listaAgenda");
 
 function save(){
   localStorage.setItem("db", JSON.stringify(db));
 }
+
+/* ================= ELEMENTOS DOM ================= */
+const carrinhoTable   = document.getElementById("carrinho");
+const totalSpan       = document.getElementById("total");
+const statusCaixaEl   = document.getElementById("statusCaixa");
+const abrirBoxEl      = document.getElementById("abrirBox");
+const resumoCaixaEl   = document.getElementById("resumoCaixa");
+
+const listaProdutosEl = document.getElementById("listaProdutos");
+const listaClientesEl = document.getElementById("listaClientes");
+const listaPlanosEl   = document.getElementById("listaPlanos");
+const listaDespesasEl = document.getElementById("listaDespesas");
+const listaAgendaEl   = document.getElementById("listaAgenda");
 
 /* ================= CAIXA ================= */
 function abrirCaixa(){
@@ -64,9 +60,9 @@ function fecharCaixa(){
 function salvarProduto(){
   if(!nomeProd.value) return;
   db.produtos.push({
-    nome: nomeProd.value,
-    valor: Number(valorProd.value)||0,
-    tipo: tipoProd.value
+    nome:nomeProd.value,
+    valor:Number(valorProd.value)||0,
+    tipo:tipoProd.value
   });
   nomeProd.value=""; valorProd.value="";
   save(); render();
@@ -76,10 +72,10 @@ function salvarProduto(){
 function salvarPlano(){
   if(!nomePlano.value) return;
   db.planos.push({
-    nome: nomePlano.value,
-    valor: Number(valorPlano.value)||0,
-    qtd: Number(qtdPlano.value)||0,
-    servico: tipoPlano.value
+    nome:nomePlano.value,
+    valor:Number(valorPlano.value)||0,
+    qtd:Number(qtdPlano.value)||0,
+    servico:tipoPlano.value
   });
   nomePlano.value=""; valorPlano.value=""; qtdPlano.value="";
   save(); render();
@@ -90,30 +86,32 @@ function salvarCliente(){
   if(!nomeCliente.value) return;
   const plano = db.planos.find(p=>p.nome===planoCliente.value);
   db.clientes.push({
-    nome: nomeCliente.value,
+    nome:nomeCliente.value,
     plano: plano ? {
-      nome: plano.nome,
-      servico: plano.servico,
-      saldo: plano.qtd
+      nome:plano.nome,
+      servico:plano.servico,
+      saldo:plano.qtd
     } : null
   });
   nomeCliente.value="";
   save(); render();
 }
 
-/* 🔁 RENOVAR PLANO (somente com caixa aberto) */
+/* 🔁 RENOVAR PLANO (CAIXA ABERTO) */
 function renovarPlanoCliente(){
   if(!db.caixa.aberto){
-    alert("Abra o caixa para renovar o plano");
+    alert("Abra o caixa para renovar plano");
     return;
   }
   const c = db.clientes.find(c=>c.nome===cliente.value);
   if(!c || !c.plano) return alert("Cliente sem plano");
+
   const p = db.planos.find(p=>p.nome===c.plano.nome);
   if(!p) return alert("Plano não encontrado");
 
   c.plano.saldo += p.qtd;
   db.caixa.dinheiro += p.valor;
+
   db.vendas.push({
     data:new Date().toISOString(),
     total:p.valor,
@@ -127,9 +125,9 @@ function renovarPlanoCliente(){
 function salvarDespesa(){
   if(!descDespesa.value) return;
   db.despesas.push({
-    desc: descDespesa.value,
-    valor: Number(valorDespesa.value)||0,
-    data: new Date().toISOString()
+    desc:descDespesa.value,
+    valor:Number(valorDespesa.value)||0,
+    data:new Date().toISOString()
   });
   descDespesa.value=""; valorDespesa.value="";
   save(); render();
@@ -180,7 +178,6 @@ function usarPlano(){
   save(); render();
 }
 
-/* 🚫 VENDA SÓ COM CAIXA ABERTO */
 function finalizarVenda(){
   if(!db.caixa.aberto){
     alert("Abra o caixa para vender");
@@ -193,9 +190,9 @@ function finalizarVenda(){
 
   const total = carrinho.reduce((s,i)=>s+i.valor,0);
 
-  if(pagamento.value==="dinheiro") db.caixa.dinheiro += total;
-  if(pagamento.value==="pix") db.caixa.pix += total;
-  if(pagamento.value==="cartao") db.caixa.cartao += total;
+  if(pagamento.value==="dinheiro") db.caixa.dinheiro+=total;
+  if(pagamento.value==="pix") db.caixa.pix+=total;
+  if(pagamento.value==="cartao") db.caixa.cartao+=total;
 
   db.vendas.push({
     data:new Date().toISOString(),
@@ -209,33 +206,34 @@ function finalizarVenda(){
 
 /* ================= CARRINHO ================= */
 function renderCarrinho(){
-  let h = "<tr><th>Item</th><th>Valor</th></tr>";
-  let s = 0;
+  let html="<tr><th>Item</th><th>Valor</th></tr>";
+  let soma=0;
 
   carrinho.forEach(i=>{
-    h += `<tr><td>${i.nome}</td><td>R$ ${i.valor.toFixed(2)}</td></tr>`;
-    s += i.valor;
+    html+=`<tr><td>${i.nome}</td><td>R$ ${i.valor.toFixed(2)}</td></tr>`;
+    soma+=i.valor;
   });
 
-  carrinhoTable.innerHTML = h;
-  totalSpan.innerText = s.toFixed(2);
+  carrinhoTable.innerHTML = html;
+  totalSpan.innerText = soma.toFixed(2);
 }
 
 /* ================= RELATÓRIO ================= */
 function gerarRelatorioMensal(){
-  const [a,m]=mesRelatorio.value.split("-");
-  const vendas=db.vendas.filter(v=>{
+  const [a,m] = mesRelatorio.value.split("-");
+  const vendas = db.vendas.filter(v=>{
     const d=new Date(v.data);
-    return d.getFullYear()==a&&(d.getMonth()+1)==m;
+    return d.getFullYear()==a && (d.getMonth()+1)==m;
   });
-  const despesas=db.despesas.filter(d=>{
+  const despesas = db.despesas.filter(d=>{
     const dt=new Date(d.data);
-    return dt.getFullYear()==a&&(dt.getMonth()+1)==m;
+    return dt.getFullYear()==a && (dt.getMonth()+1)==m;
   });
-  const tv=vendas.reduce((s,v)=>s+v.total,0);
-  const td=despesas.reduce((s,d)=>s+d.valor,0);
 
-  resumoMensal.innerHTML=`
+  const tv = vendas.reduce((s,v)=>s+v.total,0);
+  const td = despesas.reduce((s,d)=>s+d.valor,0);
+
+  resumoMensal.innerHTML = `
     <p>Vendas: R$ ${tv.toFixed(2)}</p>
     <p>Despesas: R$ ${td.toFixed(2)}</p>
     <b>Resultado: R$ ${(tv-td).toFixed(2)}</b>
@@ -244,8 +242,8 @@ function gerarRelatorioMensal(){
 
 /* ================= RENDER GERAL ================= */
 function render(){
-  statusCaixa.innerText = db.caixa.aberto ? "🟢 Caixa aberto" : "🔴 Caixa fechado";
-  abrirBox.style.display = db.caixa.aberto ? "none" : "block";
+  statusCaixaEl.innerText = db.caixa.aberto ? "🟢 Caixa aberto" : "🔴 Caixa fechado";
+  abrirBoxEl.style.display = db.caixa.aberto ? "none" : "block";
 
   produto.innerHTML = db.produtos.map(p=>
     `<option value="${p.nome}|${p.valor}">${p.nome}</option>`
@@ -265,28 +263,28 @@ function render(){
   servicoAgenda.innerHTML = tipoPlano.innerHTML;
   horaAgenda.innerHTML = gerarHorarios15().map(h=>`<option>${h}</option>`).join("");
 
-  listaAgenda.innerHTML = db.agenda.map((a,i)=>
+  listaAgendaEl.innerHTML = db.agenda.map((a,i)=>
     `<li>${a.data} ${a.hora} | ${a.cliente}
      <button onclick="removerAgendamento(${i})">✏️</button></li>`
   ).join("");
 
-  listaClientes.innerHTML = db.clientes.map(c=>
+  listaClientesEl.innerHTML = db.clientes.map(c=>
     `<li>${c.nome} ${c.plano ? `| Plano ${c.plano.nome} (${c.plano.saldo})` : ""}</li>`
   ).join("");
 
-  listaPlanos.innerHTML = db.planos.map(p=>
+  listaPlanosEl.innerHTML = db.planos.map(p=>
     `<li>${p.nome} - ${p.qtd}x ${p.servico}</li>`
   ).join("");
 
-  listaProdutos.innerHTML = db.produtos.map(p=>
+  listaProdutosEl.innerHTML = db.produtos.map(p=>
     `<li>${p.nome} (${p.tipo}) - R$ ${p.valor}</li>`
   ).join("");
 
-  listaDespesas.innerHTML = db.despesas.map(d=>
+  listaDespesasEl.innerHTML = db.despesas.map(d=>
     `<li>${d.desc} - R$ ${d.valor}</li>`
   ).join("");
 
-  resumoCaixa.innerHTML = `
+  resumoCaixaEl.innerHTML = `
     💰 Dinheiro: R$ ${db.caixa.dinheiro.toFixed(2)} |
     📲 Pix: R$ ${db.caixa.pix.toFixed(2)} |
     💳 Cartão: R$ ${db.caixa.cartao.toFixed(2)}
