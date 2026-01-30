@@ -1,136 +1,115 @@
 let caixa = JSON.parse(localStorage.getItem("caixa")) || null;
 let clientes = JSON.parse(localStorage.getItem("clientes")) || [];
 let servicos = JSON.parse(localStorage.getItem("servicos")) || [];
+let produtos = JSON.parse(localStorage.getItem("produtos")) || [];
 let planos = JSON.parse(localStorage.getItem("planos")) || [];
 
-function entrarSistema(){
-  document.getElementById("splash").style.display = "none";
-  localStorage.setItem("splash_ok","1");
+/* TOAST */
+function toast(msg, erro=false){
+  const t = document.getElementById("toast");
+  t.innerText = msg;
+  t.className = "toast" + (erro ? " erro" : "");
+  t.style.display = "block";
+  setTimeout(()=>t.style.display="none",3000);
 }
 
-window.onload = () => {
-  if(localStorage.getItem("splash_ok")){
-    document.getElementById("splash").style.display = "none";
-  }
-  render();
-};
-
+/* NAVEGAÇÃO */
 function abrirTela(id){
   document.querySelectorAll(".tela").forEach(t=>t.classList.remove("ativa"));
   document.getElementById(id).classList.add("ativa");
 }
 
-/* PLANOS */
-function cadastrarPlano(){
-  planos.push({
-    nome:nomePlano.value,
-    total:+qtdPlano.value,
-    valor:+valorPlano.value
-  });
-  localStorage.setItem("planos",JSON.stringify(planos));
-  nomePlano.value=qtdPlano.value=valorPlano.value="";
-  render();
-}
-
-/* CLIENTES */
+/* CADASTROS */
 function cadastrarCliente(){
-  const p = planos[planoCliente.value];
-  clientes.push({
-    nome:nomeCliente.value,
-    plano: p ? { nome:p.nome, total:p.total, usados:0 } : null
-  });
+  if(!nomeCliente.value) return toast("Informe o nome",true);
+  clientes.push({ nome:nomeCliente.value, plano:null });
   localStorage.setItem("clientes",JSON.stringify(clientes));
   nomeCliente.value="";
+  toast("Cliente cadastrado com sucesso");
   render();
 }
 
-/* SERVIÇOS */
 function cadastrarServico(){
   servicos.push({ nome:nomeServico.value, preco:+precoServico.value });
   localStorage.setItem("servicos",JSON.stringify(servicos));
   nomeServico.value=precoServico.value="";
+  toast("Serviço cadastrado com sucesso");
   render();
+}
+
+function cadastrarProduto(){
+  produtos.push({ nome:nomeProduto.value, preco:+precoProduto.value });
+  localStorage.setItem("produtos",JSON.stringify(produtos));
+  nomeProduto.value=precoProduto.value="";
+  toast("Produto cadastrado com sucesso");
 }
 
 /* CAIXA */
 function abrirCaixa(){
-  caixa = { valorInicial:+valorInicial.value, vendas:[] };
+  caixa={ valorInicial:+valorInicial.value, vendas:[] };
   localStorage.setItem("caixa",JSON.stringify(caixa));
+  toast("Caixa aberto");
   render();
 }
 
 function registrarVenda(){
   const c = clientes[clienteVenda.value];
   const s = servicos[servicoVenda.value];
-
-  let valor = s.preco;
-
-  if(c.plano){
-    if(c.plano.usados >= c.plano.total){
-      alert("Plano esgotado");
-      return;
-    }
-    c.plano.usados++;
-    valor = 0;
-  }
-
-  caixa.vendas.push({ cliente:c.nome, servico:s.nome, valor });
+  caixa.vendas.push({
+    tipo:"servico",
+    nome:s.nome,
+    valor:s.preco,
+    data:new Date()
+  });
   localStorage.setItem("caixa",JSON.stringify(caixa));
-  localStorage.setItem("clientes",JSON.stringify(clientes));
+  toast("Venda realizada com sucesso");
   render();
 }
 
 function fecharCaixa(){
   localStorage.removeItem("caixa");
   caixa=null;
+  toast("Caixa fechado");
   render();
 }
 
-/* RENDER SEM ERRO */
-function render(){
-  /* SELECT CLIENTES */
-  const selCliente = document.getElementById("clienteVenda");
-  if(selCliente){
-    selCliente.innerHTML="";
-    clientes.forEach((c,i)=>{
-      let info = c.plano ? `(${c.plano.total-c.plano.usados})` : "";
-      selCliente.innerHTML += `<option value="${i}">${c.nome} ${info}</option>`;
-    });
-  }
+/* RELATÓRIOS */
+function relatorio(tipo){
+  const agora = new Date();
+  let total = 0, qtd = 0;
 
-  /* SELECT SERVIÇOS */
-  const selServico = document.getElementById("servicoVenda");
-  if(selServico){
-    selServico.innerHTML="";
-    servicos.forEach((s,i)=>{
-      selServico.innerHTML += `<option value="${i}">${s.nome}</option>`;
-    });
-  }
+  caixa?.vendas.forEach(v=>{
+    const d = new Date(v.data);
+    const diff = (agora - d)/(1000*60*60*24);
 
-  /* SELECT PLANOS */
-  const selPlano = document.getElementById("planoCliente");
-  if(selPlano){
-    selPlano.innerHTML = `<option value="">Sem plano</option>`;
-    planos.forEach((p,i)=>{
-      selPlano.innerHTML += `<option value="${i}">${p.nome}</option>`;
-    });
-  }
+    if(
+      (tipo==="dia" && diff<=1) ||
+      (tipo==="semana" && diff<=7) ||
+      (tipo==="mes" && diff<=30)
+    ){
+      total+=v.valor;
+      qtd++;
+    }
+  });
 
-  if(!caixa) return;
-  const total = caixa.vendas.reduce((s,v)=>s+v.valor,0);
-  resInicial.innerText = caixa.valorInicial.toFixed(2);
-  resVendas.innerText = total.toFixed(2);
-  resTotal.innerText = (total + caixa.valorInicial).toFixed(2);
+  resultadoRelatorio.innerHTML = `
+    <p>Vendas: ${qtd}</p>
+    <p>Total: R$ ${total.toFixed(2)}</p>
+  `;
 }
 
-function gerarPDF(){
-  const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF();
-  let y = 10;
-  pdf.text("Fechamento de Caixa",10,y);
-  caixa.vendas.forEach(v=>{
-    y+=8;
-    pdf.text(`${v.cliente} - ${v.servico} R$${v.valor}`,10,y);
-  });
-  pdf.save("caixa.pdf");
+/* RENDER */
+function render(){
+  if(!caixa) return;
+
+  clienteVenda.innerHTML="";
+  clientes.forEach((c,i)=>clienteVenda.innerHTML+=`<option value="${i}">${c.nome}</option>`);
+
+  servicoVenda.innerHTML="";
+  servicos.forEach((s,i)=>servicoVenda.innerHTML+=`<option value="${i}">${s.nome}</option>`);
+
+  const total = caixa.vendas.reduce((s,v)=>s+v.valor,0);
+  resInicial.innerText=caixa.valorInicial.toFixed(2);
+  resVendas.innerText=total.toFixed(2);
+  resTotal.innerText=(total+caixa.valorInicial).toFixed(2);
 }
