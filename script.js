@@ -1,21 +1,19 @@
 /* =========================
-   CONTROLE DE TELAS
+   TROCA DE TELAS
 ========================= */
 function show(id){
-  document.querySelectorAll(".section").forEach(sec=>{
-    sec.classList.remove("active");
-    sec.style.display = "none";
+  document.querySelectorAll(".section").forEach(s=>{
+    s.classList.remove("active");
+    s.style.display = "none";
   });
-
   const tela = document.getElementById(id);
   if(!tela) return;
-
   tela.classList.add("active");
   tela.style.display = "block";
 }
 
 /* =========================
-   BANCO DE DADOS LOCAL
+   BANCO LOCAL
 ========================= */
 const db = JSON.parse(localStorage.getItem("db")) || {
   clientes:[],
@@ -24,19 +22,13 @@ const db = JSON.parse(localStorage.getItem("db")) || {
   vendas:[],
   despesas:[],
   agenda:[],
-  caixa:{
-    aberto:false,
-    abertura:0,
-    dinheiro:0,
-    pix:0,
-    cartao:0
-  }
+  caixa:{aberto:false,abertura:0,dinheiro:0,pix:0,cartao:0}
 };
 
-db.caixa.abertura = db.caixa.abertura || 0;
-db.caixa.dinheiro = db.caixa.dinheiro || 0;
-db.caixa.pix = db.caixa.pix || 0;
-db.caixa.cartao = db.caixa.cartao || 0;
+db.caixa.abertura ||= 0;
+db.caixa.dinheiro ||= 0;
+db.caixa.pix ||= 0;
+db.caixa.cartao ||= 0;
 
 let carrinho = [];
 
@@ -50,8 +42,7 @@ function save(){
 function abrirCaixa(){
   db.caixa.aberto = true;
   db.caixa.abertura = Number(valorAbertura.value) || 0;
-  save();
-  render();
+  save(); render();
 }
 
 function fecharCaixa(){
@@ -59,8 +50,7 @@ function fecharCaixa(){
   db.caixa.dinheiro = 0;
   db.caixa.pix = 0;
   db.caixa.cartao = 0;
-  save();
-  render();
+  save(); render();
 }
 
 /* =========================
@@ -78,31 +68,7 @@ function salvarProduto(){
   nomeProd.value = "";
   valorProd.value = "";
 
-  save();
-  render();
-}
-
-/* =========================
-   CLIENTES
-========================= */
-function salvarCliente(){
-  if(!nomeCliente.value) return;
-
-  const planoSel = db.planos.find(p=>p.nome === planoCliente.value);
-
-  db.clientes.push({
-    nome: nomeCliente.value,
-    plano: planoSel ? {
-      nome: planoSel.nome,
-      servico: planoSel.servico,
-      saldo: planoSel.qtd
-    } : null
-  });
-
-  nomeCliente.value = "";
-
-  save();
-  render();
+  save(); render();
 }
 
 /* =========================
@@ -122,8 +88,28 @@ function salvarPlano(){
   valorPlano.value = "";
   qtdPlano.value = "";
 
-  save();
-  render();
+  save(); render();
+}
+
+/* =========================
+   CLIENTES
+========================= */
+function salvarCliente(){
+  if(!nomeCliente.value) return;
+
+  const plano = db.planos.find(p => p.nome === planoCliente.value);
+
+  db.clientes.push({
+    nome: nomeCliente.value,
+    plano: plano ? {
+      nome: plano.nome,
+      servico: plano.servico,
+      saldo: plano.qtd
+    } : null
+  });
+
+  nomeCliente.value = "";
+  save(); render();
 }
 
 /* =========================
@@ -141,8 +127,7 @@ function salvarDespesa(){
   descDespesa.value = "";
   valorDespesa.value = "";
 
-  save();
-  render();
+  save(); render();
 }
 
 /* =========================
@@ -173,56 +158,66 @@ function salvarAgendamento(){
     servico:servicoAgenda.value
   });
 
-  save();
-  render();
+  save(); render();
 }
 
 /* =========================
-   CARRINHO
+   CARRINHO / PDV
 ========================= */
 function addItem(){
   if(!produto.value) return;
 
-  const [nome, valor] = produto.value.split("|");
-
-  carrinho.push({
-    nome,
-    valor: Number(valor) || 0
-  });
+  const [nome,valor] = produto.value.split("|");
+  carrinho.push({ nome, valor:Number(valor)||0 });
 
   renderCarrinho();
 }
 
 function usarPlano(){
   const nome = cliente.value;
-  if(!nome) return alert("Selecione um cliente");
-
   const c = db.clientes.find(c=>c.nome===nome);
+
   if(!c || !c.plano) return alert("Cliente sem plano");
   if(c.plano.saldo <= 0) return alert("Plano esgotado");
 
   c.plano.saldo--;
   alert(`Plano usado. Saldo restante: ${c.plano.saldo}`);
 
-  save();
-  render();
+  save(); render();
+}
+
+function finalizarVenda(){
+  if(!db.caixa.aberto) return alert("Caixa fechado");
+  if(carrinho.length === 0) return alert("Carrinho vazio");
+
+  const total = carrinho.reduce((s,i)=>s+i.valor,0);
+
+  if(pagamento.value === "dinheiro") db.caixa.dinheiro += total;
+  if(pagamento.value === "pix") db.caixa.pix += total;
+  if(pagamento.value === "cartao") db.caixa.cartao += total;
+
+  db.vendas.push({
+    data:new Date().toISOString(),
+    total
+  });
+
+  carrinho = [];
+  save(); render();
 }
 
 /* =========================
    RENDER
 ========================= */
 function renderCarrinho(){
-  let html = "<tr><th>Item</th><th>Valor</th></tr>";
-  let soma = 0;
+  let html="<tr><th>Item</th><th>Valor</th></tr>";
+  let soma=0;
 
   carrinho.forEach(i=>{
-    html += `<tr><td>${i.nome}</td><td>R$ ${i.valor.toFixed(2)}</td></tr>`;
-    soma += i.valor;
+    html+=`<tr><td>${i.nome}</td><td>R$ ${i.valor.toFixed(2)}</td></tr>`;
+    soma+=i.valor;
   });
 
-  carrinhoElem = document.getElementById("carrinho");
-  if(carrinhoElem) carrinhoElem.innerHTML = html;
-
+  carrinhoElem.innerHTML = html;
   total.innerText = soma.toFixed(2);
 }
 
@@ -231,33 +226,35 @@ function render(){
   abrirBox.style.display = db.caixa.aberto ? "none" : "block";
 
   /* selects */
-  cliente.innerHTML = db.clientes.map(c=>`<option>${c.nome}</option>`).join("");
-  clienteAgenda.innerHTML = cliente.innerHTML;
-
   produto.innerHTML = db.produtos.map(p=>
     `<option value="${p.nome}|${p.valor}">${p.nome}</option>`
   ).join("");
 
+  cliente.innerHTML = db.clientes.map(c=>`<option>${c.nome}</option>`).join("");
+  clienteAgenda.innerHTML = cliente.innerHTML;
+
   tipoPlano.innerHTML = db.produtos
     .filter(p=>p.tipo==="servico")
-    .map(p=>`<option>${p.nome}</option>`)
-    .join("");
+    .map(p=>`<option>${p.nome}</option>`).join("");
+
+  planoCliente.innerHTML =
+    `<option value="">Sem plano</option>` +
+    db.planos.map(p=>`<option>${p.nome}</option>`).join("");
 
   servicoAgenda.innerHTML = tipoPlano.innerHTML;
-
   horaAgenda.innerHTML = gerarHorarios15().map(h=>`<option>${h}</option>`).join("");
 
   /* listas */
   listaProdutos.innerHTML = db.produtos.map(p=>
-    `<li>${p.nome} (${p.tipo}) - R$ ${p.valor}</li>`
-  ).join("");
-
-  listaClientes.innerHTML = db.clientes.map(c=>
-    `<li>${c.nome} ${c.plano ? "| Plano: "+c.plano.nome+" ("+c.plano.saldo+")" : ""}</li>`
+    `<li>${p.nome} (${p.tipo})</li>`
   ).join("");
 
   listaPlanos.innerHTML = db.planos.map(p=>
     `<li>${p.nome} - ${p.qtd}x ${p.servico}</li>`
+  ).join("");
+
+  listaClientes.innerHTML = db.clientes.map(c=>
+    `<li>${c.nome} ${c.plano ? "| Plano: "+c.plano.nome+" ("+c.plano.saldo+")" : ""}</li>`
   ).join("");
 
   listaDespesas.innerHTML = db.despesas.map(d=>
@@ -280,18 +277,19 @@ function render(){
 }
 
 /* =========================
-   EXPOR FUNÇÕES (ONCLICK)
+   EXPOR (ONCLICK)
 ========================= */
 window.show = show;
 window.abrirCaixa = abrirCaixa;
 window.fecharCaixa = fecharCaixa;
 window.salvarProduto = salvarProduto;
-window.salvarCliente = salvarCliente;
 window.salvarPlano = salvarPlano;
+window.salvarCliente = salvarCliente;
 window.salvarDespesa = salvarDespesa;
 window.salvarAgendamento = salvarAgendamento;
 window.addItem = addItem;
 window.usarPlano = usarPlano;
+window.finalizarVenda = finalizarVenda;
 
 /* =========================
    START
