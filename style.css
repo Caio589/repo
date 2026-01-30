@@ -1,46 +1,57 @@
-let caixa = JSON.parse(localStorage.getItem("caixa")) || null;
-
-function abrirCaixa() {
-  const valorInicial = parseFloat(document.getElementById("valorInicial").value);
-
-  if (isNaN(valorInicial) || valorInicial < 0) {
-    alert("Informe um valor inicial válido");
-    return;
-  }
-
-  caixa = {
-    aberto: true,
-    valorInicial: valorInicial,
-    dataAbertura: new Date().toLocaleString("pt-BR"),
-    vendas: []
-  };
-
-  localStorage.setItem("caixa", JSON.stringify(caixa));
-  render();
+body {
+  background: #0f0f0f;
+  color: #fff;
+  font-family: Arial, sans-serif;
 }
 
-function fecharCaixa() {
-  if (!confirm("Deseja realmente fechar o caixa?")) return;
-
-  localStorage.removeItem("caixa");
-  caixa = null;
-  render();
+.container {
+  max-width: 450px;
+  margin: 30px auto;
+  padding: 15px;
 }
 
-function render() {
-  const abertura = document.getElementById("aberturaCaixa");
-  const aberto = document.getElementById("caixaAberto");
-
-  if (caixa && caixa.aberto) {
-    abertura.classList.add("hidden");
-    aberto.classList.remove("hidden");
-
-    document.getElementById("dataAbertura").innerText = caixa.dataAbertura;
-    document.getElementById("valorAbertura").innerText = caixa.valorInicial.toFixed(2);
-  } else {
-    abertura.classList.remove("hidden");
-    aberto.classList.add("hidden");
-  }
+h1 {
+  text-align: center;
 }
 
-render();
+.card {
+  background: #1b1b1b;
+  padding: 15px;
+  border-radius: 10px;
+  margin-bottom: 15px;
+}
+
+input, select {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: 5px;
+  border: none;
+}
+
+button {
+  width: 100%;
+  padding: 12px;
+  background: #c89b3c;
+  border: none;
+  border-radius: 5px;
+  font-weight: bold;
+}
+
+.fechar {
+  background: #b22222;
+}
+
+.hidden {
+  display: none;
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+}
+
+li {
+  border-bottom: 1px solid #333;
+  padding: 5px 0;
+}
