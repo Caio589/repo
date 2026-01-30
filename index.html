@@ -7,32 +7,53 @@
 </head>
 <body>
 
-  <div class="container">
+<div class="container">
+  <h1>💈 PDV Barbearia</h1>
 
-    <h1>💈 PDV Barbearia</h1>
+  <!-- ABERTURA DE CAIXA -->
+  <div id="aberturaCaixa" class="card">
+    <h2>Abertura de Caixa</h2>
+    <input type="number" id="valorInicial" placeholder="Valor inicial (R$)">
+    <button onclick="abrirCaixa()">Abrir Caixa</button>
+  </div>
 
-    <!-- ABERTURA DE CAIXA -->
-    <div id="aberturaCaixa" class="card">
-      <h2>Abertura de Caixa</h2>
+  <!-- SISTEMA -->
+  <div id="sistema" class="hidden">
 
-      <label>Valor inicial (R$)</label>
-      <input type="number" id="valorInicial" placeholder="Ex: 100">
-
-      <button onclick="abrirCaixa()">Abrir Caixa</button>
+    <!-- CADASTRO SERVIÇO -->
+    <div class="card">
+      <h2>Cadastrar Serviço</h2>
+      <input id="nomeServico" placeholder="Nome do serviço">
+      <input id="precoServico" type="number" placeholder="Preço (R$)">
+      <button onclick="cadastrarServico()">Cadastrar</button>
     </div>
 
-    <!-- CAIXA ABERTO -->
-    <div id="caixaAberto" class="card hidden">
-      <h2>Caixa Aberto ✅</h2>
+    <!-- VENDA -->
+    <div class="card">
+      <h2>Venda</h2>
+      <select id="servicoVenda"></select>
+      <button onclick="registrarVenda()">Registrar Venda</button>
+    </div>
 
-      <p><strong>Data:</strong> <span id="dataAbertura"></span></p>
-      <p><strong>Valor Inicial:</strong> R$ <span id="valorAbertura"></span></p>
-
+    <!-- RESUMO -->
+    <div class="card">
+      <h2>Resumo do Caixa</h2>
+      <p>Inicial: R$ <span id="resInicial"></span></p>
+      <p>Vendas: R$ <span id="resVendas"></span></p>
+      <p><strong>Total: R$ <span id="resTotal"></span></strong></p>
       <button class="fechar" onclick="fecharCaixa()">Fechar Caixa</button>
+    </div>
+
+    <!-- HISTÓRICO -->
+    <div class="card">
+      <h2>Histórico de Vendas</h2>
+      <ul id="listaVendas"></ul>
     </div>
 
   </div>
 
-  <script src="script.js"></script>
+</div>
+
+<script src="script.js"></script>
 </body>
 </html>
