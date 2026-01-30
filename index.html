@@ -5,129 +5,204 @@
 <title>PDV Barbearia</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<link rel="stylesheet" href="style.css">
+<style>
+body{margin:0;font-family:Arial;background:#111;color:#fff}
+.menu{position:fixed;left:0;top:0;bottom:0;width:70px;background:#000;display:flex;flex-direction:column;align-items:center;padding-top:10px}
+.menu button{background:none;border:none;color:#f1c40f;font-size:22px;margin:10px 0;cursor:pointer}
+.content{margin-left:90px;padding:20px}
+.section{display:none}
+.section.active{display:block}
+input,select,button{padding:6px;margin:4px 0}
+button{cursor:pointer}
+.total{font-size:18px;color:#2ecc71}
+table{width:100%}
+</style>
 </head>
 
 <body>
 
-<div class="overlay">
-
-  <!-- MENU -->
-  <div class="menu">
-    <button onclick="show('pdv')">💈</button>
-    <button onclick="show('agenda')">🕒</button>
-    <button onclick="show('clientes')">👤</button>
-    <button onclick="show('planos')">💳</button>
-    <button onclick="show('produtos')">📦</button>
-    <button onclick="show('despesas')">🧾</button>
-    <button onclick="show('mensal')">📆</button>
-  <button onclick="renovarPlanoCliente()">Renovar Plano</button>
+<div class="menu">
+  <button onclick="show('pdv')">💈</button>
+  <button onclick="show('clientes')">👤</button>
+  <button onclick="show('planos')">💳</button>
+  <button onclick="show('produtos')">📦</button>
 </div>
 
-  <!-- CONTEÚDO -->
-  <div class="content">
+<div class="content">
 
-    <!-- PDV -->
-    <div id="pdv" class="section active">
-      <h2>PDV / Caixa</h2>
-      <p id="statusCaixa"></p>
+  <!-- PDV -->
+  <div id="pdv" class="section active">
+    <h2>PDV / Caixa</h2>
+    <p id="statusCaixa"></p>
 
-      <div id="abrirBox">
-        <input id="valorAbertura" type="number" placeholder="Valor de abertura">
-        <button onclick="abrirCaixa()">Abrir Caixa</button>
-      </div>
+    <input id="valorAbertura" type="number" placeholder="Valor de abertura">
+    <button onclick="abrirCaixa()">Abrir Caixa</button>
 
-      <select id="cliente"></select>
-      <select id="produto"></select>
+    <select id="cliente"></select>
+    <select id="produto"></select>
 
-      <select id="pagamento">
-        <option value="dinheiro">Dinheiro</option>
-        <option value="pix">Pix</option>
-        <option value="cartao">Cartão</option>
-      </select>
+    <button onclick="addItem()">Adicionar</button>
 
-      <input id="valorPago" type="number" placeholder="Valor pago (dinheiro)">
+    <table id="carrinho"></table>
+    <p class="total">Total: R$ <span id="total">0.00</span></p>
 
-      <button onclick="addItem()">Adicionar</button>
-      <button onclick="usarPlano()">Usar Plano</button>
-
-      <table id="carrinho"></table>
-
-      <p class="total">
-        Total: R$ <span id="total">0.00</span>
-      </p>
-
-      <button onclick="finalizarVenda()">Finalizar Venda</button>
-      <button onclick="fecharCaixa()" class="btn-danger">Fechar Caixa</button>
-
-      <div id="resumoCaixa"></div>
-    </div>
-
-    <!-- AGENDA -->
-    <div id="agenda" class="section">
-      <h2>Agenda</h2>
-      <input type="date" id="dataAgenda">
-      <select id="horaAgenda"></select>
-      <select id="clienteAgenda"></select>
-      <select id="servicoAgenda"></select>
-      <button onclick="salvarAgendamento()">Agendar</button>
-      <ul id="listaAgenda"></ul>
-    </div>
-
-    <!-- CLIENTES -->
-    <div id="clientes" class="section">
-      <h2>Clientes</h2>
-      <input id="nomeCliente" placeholder="Nome">
-      <select id="planoCliente"></select>
-      <button onclick="salvarCliente()">Salvar</button>
-      <ul id="listaClientes"></ul>
-    </div>
-
-    <!-- PLANOS -->
-    <div id="planos" class="section">
-      <h2>Planos</h2>
-      <input id="nomePlano" placeholder="Nome do plano">
-      <input id="valorPlano" type="number" placeholder="Valor">
-      <input id="qtdPlano" type="number" placeholder="Qtd serviços">
-      <select id="tipoPlano"></select>
-      <button onclick="salvarPlano()">Salvar</button>
-      <ul id="listaPlanos"></ul>
-    </div>
-
-    <!-- PRODUTOS -->
-    <div id="produtos" class="section">
-      <h2>Produtos / Serviços</h2>
-      <input id="nomeProd" placeholder="Nome">
-      <input id="valorProd" type="number" placeholder="Valor">
-      <select id="tipoProd">
-        <option value="produto">Produto</option>
-        <option value="servico">Serviço</option>
-      </select>
-      <button onclick="salvarProduto()">Salvar</button>
-      <ul id="listaProdutos"></ul>
-    </div>
-
-    <!-- DESPESAS -->
-    <div id="despesas" class="section">
-      <h2>Despesas</h2>
-      <input id="descDespesa" placeholder="Descrição">
-      <input id="valorDespesa" type="number" placeholder="Valor">
-      <button onclick="salvarDespesa()">Salvar</button>
-      <ul id="listaDespesas"></ul>
-    </div>
-
-    <!-- RELATÓRIO MENSAL -->
-    <div id="mensal" class="section">
-      <h2>Relatório Mensal</h2>
-      <input type="month" id="mesRelatorio">
-      <button onclick="gerarRelatorioMensal()">Gerar</button>
-      <div id="resumoMensal"></div>
-    </div>
-
+    <button onclick="finalizarVenda()">Finalizar Venda</button>
   </div>
+
+  <!-- CLIENTES -->
+  <div id="clientes" class="section">
+    <h2>Clientes</h2>
+    <input id="nomeCliente" placeholder="Nome">
+    <select id="planoCliente"></select>
+    <button onclick="salvarCliente()">Salvar Cliente</button>
+    <button onclick="renovarPlanoCliente()">Renovar Plano</button>
+    <ul id="listaClientes"></ul>
+  </div>
+
+  <!-- PLANOS -->
+  <div id="planos" class="section">
+    <h2>Planos</h2>
+    <input id="nomePlano" placeholder="Nome do plano">
+    <input id="valorPlano" type="number" placeholder="Valor">
+    <input id="qtdPlano" type="number" placeholder="Qtd serviços">
+    <button onclick="salvarPlano()">Salvar Plano</button>
+    <ul id="listaPlanos"></ul>
+  </div>
+
+  <!-- PRODUTOS -->
+  <div id="produtos" class="section">
+    <h2>Produtos / Serviços</h2>
+    <input id="nomeProd" placeholder="Nome">
+    <input id="valorProd" type="number" placeholder="Valor">
+    <select id="tipoProd">
+      <option value="produto">Produto</option>
+      <option value="servico">Serviço</option>
+    </select>
+    <button onclick="salvarProduto()">Salvar Produto</button>
+    <ul id="listaProdutos"></ul>
+  </div>
+
 </div>
 
-<!-- ⚠️ IMPORTANTE: JS NO FINAL, SEM MODULE -->
-<script src="script.js"></script>
+<script>
+/* ===== TELAS ===== */
+function show(id){
+  document.querySelectorAll(".section").forEach(s=>{
+    s.classList.remove("active");
+    s.style.display="none";
+  });
+  const el=document.getElementById(id);
+  if(el){
+    el.classList.add("active");
+    el.style.display="block";
+  }
+}
+
+/* ===== DB ===== */
+const db = JSON.parse(localStorage.getItem("db")) || {
+  produtos:[],
+  planos:[],
+  clientes:[],
+  vendas:[],
+  caixa:{aberto:false}
+};
+
+let carrinho=[];
+
+function save(){
+  localStorage.setItem("db", JSON.stringify(db));
+}
+
+/* ===== CAIXA ===== */
+function abrirCaixa(){
+  db.caixa.aberto=true;
+  save();
+  statusCaixa.innerText="🟢 Caixa aberto";
+}
+
+/* ===== PRODUTOS ===== */
+function salvarProduto(){
+  db.produtos.push({
+    nome:nomeProd.value,
+    valor:Number(valorProd.value)||0,
+    tipo:tipoProd.value
+  });
+  save();
+  render();
+}
+
+/* ===== PLANOS ===== */
+function salvarPlano(){
+  db.planos.push({
+    nome:nomePlano.value,
+    valor:Number(valorPlano.value)||0,
+    qtd:Number(qtdPlano.value)||0
+  });
+  save();
+  render();
+}
+
+/* ===== CLIENTES ===== */
+function salvarCliente(){
+  const plano=db.planos.find(p=>p.nome===planoCliente.value);
+  db.clientes.push({
+    nome:nomeCliente.value,
+    plano:plano?{nome:plano.nome,saldo:plano.qtd,valor:plano.valor}:null
+  });
+  save();
+  render();
+}
+
+/* 🔁 RENOVAÇÃO DE PLANO */
+function renovarPlanoCliente(){
+  if(!db.caixa.aberto) return alert("Abra o caixa");
+  const c=db.clientes.find(c=>c.nome===cliente.value);
+  if(!c||!c.plano) return alert("Cliente sem plano");
+  c.plano.saldo+=db.planos.find(p=>p.nome===c.plano.nome).qtd;
+  db.vendas.push({total:c.plano.valor});
+  save();
+  render();
+}
+
+/* ===== PDV ===== */
+function addItem(){
+  const [n,v]=produto.value.split("|");
+  carrinho.push({nome:n,valor:Number(v)});
+  renderCarrinho();
+}
+
+function finalizarVenda(){
+  if(!db.caixa.aberto) return alert("Abra o caixa");
+  const total=carrinho.reduce((s,i)=>s+i.valor,0);
+  db.vendas.push({total});
+  carrinho=[];
+  renderCarrinho();
+  save();
+}
+
+/* ===== RENDER ===== */
+function renderCarrinho(){
+  let h="<tr><th>Item</th><th>Valor</th></tr>";
+  let s=0;
+  carrinho.forEach(i=>{
+    h+=`<tr><td>${i.nome}</td><td>R$ ${i.valor.toFixed(2)}</td></tr>`;
+    s+=i.valor;
+  });
+  carrinho.innerHTML=h;
+  total.innerText=s.toFixed(2);
+}
+
+function render(){
+  produto.innerHTML=db.produtos.map(p=>`<option value="${p.nome}|${p.valor}">${p.nome}</option>`).join("");
+  cliente.innerHTML=db.clientes.map(c=>`<option>${c.nome}</option>`).join("");
+  planoCliente.innerHTML=`<option value="">Sem plano</option>`+db.planos.map(p=>`<option>${p.nome}</option>`).join("");
+  listaProdutos.innerHTML=db.produtos.map(p=>`<li>${p.nome}</li>`).join("");
+  listaPlanos.innerHTML=db.planos.map(p=>`<li>${p.nome} (${p.qtd})</li>`).join("");
+  listaClientes.innerHTML=db.clientes.map(c=>`<li>${c.nome} ${c.plano?`| ${c.plano.nome} (${c.plano.saldo})`:""}</li>`).join("");
+}
+
+render();
+</script>
+
 </body>
 </html>
