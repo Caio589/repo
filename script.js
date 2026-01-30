@@ -1,36 +1,15 @@
-// ===== CONTROLE DE TELAS (OBRIGATÓRIO PARA O MENU) =====
+/* ================= TELAS ================= */
 function show(id){
   document.querySelectorAll(".section").forEach(sec=>{
     sec.classList.remove("active");
     sec.style.display = "none";
   });
-
   const el = document.getElementById(id);
   if(el){
     el.classList.add("active");
     el.style.display = "block";
   }
 }
-
-// expõe para onclick do HTML
-window.show = show;
-
-/* ================= CONTROLE DE TELAS ================= */
-function show(id){
-  document.querySelectorAll(".section").forEach(sec=>{
-    sec.classList.remove("active");
-    sec.style.display = "none";
-  });
-
-  const el = document.getElementById(id);
-  if(el){
-    el.classList.add("active");
-    el.style.display = "block";
-  }
-}
-
-/* expõe para o onclick do HTML */
-window.show = show;
 
 /* ================= DB ================= */
 const db = JSON.parse(localStorage.getItem("db")) || {
@@ -40,7 +19,7 @@ const db = JSON.parse(localStorage.getItem("db")) || {
   vendas:[],
   despesas:[],
   agenda:[],
-  caixa:{aberto:false,abertura:0,dinheiro:0,pix:0,cartao:0}
+  caixa:{aberto:false,abertura:0}
 };
 
 let carrinho = [];
@@ -52,70 +31,118 @@ function save(){
 /* ================= CAIXA ================= */
 function abrirCaixa(){
   db.caixa.aberto = true;
-  db.caixa.abertura = Number(valorAbertura.value) || 0;
-  save(); render();
+  db.caixa.abertura = Number(valorAbertura.value)||0;
+  save();
+  render();
 }
 
-function fecharCaixa(){
-  db.caixa.aberto = false;
-  db.caixa.dinheiro = 0;
-  db.caixa.pix = 0;
-  db.caixa.cartao = 0;
-  save(); render();
+/* ================= PRODUTOS ================= */
+function salvarProduto(){
+  db.produtos.push({
+    nome:nomeProd.value,
+    valor:Number(valorProd.value)||0,
+    tipo:tipoProd.value
+  });
+  nomeProd.value="";
+  valorProd.value="";
+  save();
+  render();
+}
+
+/* ================= PLANOS ================= */
+function salvarPlano(){
+  db.planos.push({
+    nome:nomePlano.value,
+    valor:Number(valorPlano.value)||0,
+    qtd:Number(qtdPlano.value)||0,
+    servico:tipoPlano.value
+  });
+  nomePlano.value="";
+  valorPlano.value="";
+  qtdPlano.value="";
+  save();
+  render();
 }
 
 /* ================= CLIENTES ================= */
 function salvarCliente(){
   const plano = db.planos.find(p=>p.nome===planoCliente.value);
   db.clientes.push({
-    nome: nomeCliente.value,
+    nome:nomeCliente.value,
     plano: plano ? {
-      nome: plano.nome,
-      servico: plano.servico,
-      saldo: plano.qtd
+      nome:plano.nome,
+      saldo:plano.qtd
     } : null
   });
   nomeCliente.value="";
-  save(); render();
+  save();
+  render();
 }
 
-/* 🔁 RENOVAÇÃO DE PLANO (NOVO) */
+/* ================= RENOVAÇÃO DE PLANO ================= */
 function renovarPlanoCliente(){
   if(!db.caixa.aberto){
-    alert("Abra o caixa para renovar o plano");
+    alert("Abra o caixa para renovar plano");
     return;
   }
 
-  const clienteNome = cliente.value;
-  const c = db.clientes.find(c=>c.nome===clienteNome);
+  const nome = cliente.value;
+  const c = db.clientes.find(c=>c.nome===nome);
 
   if(!c || !c.plano){
-    alert("Cliente não possui plano");
+    alert("Cliente sem plano");
     return;
   }
 
-  const plano = db.planos.find(p=>p.nome===c.plano.nome);
-  if(!plano){
+  const planoBase = db.planos.find(p=>p.nome===c.plano.nome);
+  if(!planoBase){
     alert("Plano não encontrado");
     return;
   }
 
-  // soma saldo do plano
-  c.plano.saldo += plano.qtd;
-
-  // entra no caixa como venda
-  db.caixa.dinheiro += plano.valor;
+  c.plano.saldo += planoBase.qtd;
 
   db.vendas.push({
-    data: new Date().toISOString(),
-    total: plano.valor,
-    tipo: "renovacao",
-    cliente: c.nome,
-    plano: plano.nome
+    data:new Date().toISOString(),
+    total:planoBase.valor,
+    tipo:"renovacao"
   });
 
-  alert("Plano renovado com sucesso");
+  save();
+  render();
+}
 
+/* ================= DESPESAS ================= */
+function salvarDespesa(){
+  db.despesas.push({
+    desc:descDespesa.value,
+    valor:Number(valorDespesa.value)||0,
+    data:new Date().toISOString()
+  });
+  descDespesa.value="";
+  valorDespesa.value="";
+  save();
+  render();
+}
+
+/* ================= AGENDA ================= */
+function gerarHorarios15(){
+  let h=[];
+  for(let i=8;i<=20;i++){
+    ["00","15","30","45"].forEach(m=>{
+      h.push(`${String(i).padStart(2,"0")}:${m}`);
+    });
+  }
+  return h;
+}
+
+function salvarAgendamento(){
+  db.agenda.push({
+    data:dataAgenda.value,
+    hora:horaAgenda.value,
+    cliente:clienteAgenda.value,
+    servico:servicoAgenda.value
+  });
   save();
   render();
 }
@@ -134,35 +161,44 @@ function finalizarVenda(){
   }
 
   const total = carrinho.reduce((s,i)=>s+i.valor,0);
-  if(total <= 0) return;
-
-  if(pagamento.value==="dinheiro") db.caixa.dinheiro += total;
-  if(pagamento.value==="pix") db.caixa.pix += total;
-  if(pagamento.value==="cartao") db.caixa.cartao += total;
 
   db.vendas.push({
     data:new Date().toISOString(),
     total,
+    pagamento:pagamento.value,
     tipo:"venda"
   });
 
   carrinho=[];
-  save(); render();
+  save();
+  render();
 }
 
 /* ================= CARRINHO ================= */
 function renderCarrinho(){
-  const carrinhoElem = document.getElementById("carrinho");
-  let h="<tr><th>Item</th><th>Valor</th></tr>";
-  let s=0;
+  let html="<tr><th>Item</th><th>Valor</th></tr>";
+  let soma=0;
 
   carrinho.forEach(i=>{
-    h+=`<tr><td>${i.nome}</td><td>R$ ${i.valor.toFixed(2)}</td></tr>`;
-    s+=i.valor;
+    html+=`<tr><td>${i.nome}</td><td>R$ ${i.valor.toFixed(2)}</td></tr>`;
+    soma+=i.valor;
   });
 
-  carrinhoElem.innerHTML=h;
-  total.innerText=s.toFixed(2);
+  carrinhoElem = document.getElementById("carrinho");
+  carrinhoElem.innerHTML = html;
+  total.innerText = soma.toFixed(2);
+}
+
+/* ================= RELATÓRIO ================= */
+function gerarRelatorioMensal(){
+  const [ano,mes] = mesRelatorio.value.split("-");
+  const vendas = db.vendas.filter(v=>{
+    const d = new Date(v.data);
+    return d.getFullYear()==ano && (d.getMonth()+1)==mes;
+  });
+
+  const total = vendas.reduce((s,v)=>s+v.total,0);
+  resumoMensal.innerHTML = `<p>Faturamento: R$ ${total.toFixed(2)}</p>`;
 }
 
 /* ================= RENDER ================= */
@@ -171,62 +207,57 @@ function render(){
   abrirBox.style.display = db.caixa.aberto ? "none" : "block";
 
   cliente.innerHTML = db.clientes.map(c=>`<option>${c.nome}</option>`).join("");
-  listaClientes.innerHTML = db.clientes.map(c=>
-    `<li>${c.nome} ${c.plano ? `| Plano ${c.plano.nome} (${c.plano.saldo})` : ""}</li>`
+  clienteAgenda.innerHTML = cliente.innerHTML;
+
+  produto.innerHTML = db.produtos.map(p=>
+    `<option value="${p.nome}|${p.valor}">${p.nome}</option>`
   ).join("");
 
-  resumoCaixa.innerHTML = `
-    💰 Dinheiro: R$ ${db.caixa.dinheiro.toFixed(2)} |
-    📲 Pix: R$ ${db.caixa.pix.toFixed(2)} |
-    💳 Cartão: R$ ${db.caixa.cartao.toFixed(2)}
-  `;
+  planoCliente.innerHTML =
+    `<option value="">Sem plano</option>` +
+    db.planos.map(p=>`<option>${p.nome}</option>`).join("");
+
+  tipoPlano.innerHTML = db.produtos
+    .filter(p=>p.tipo==="servico")
+    .map(p=>`<option>${p.nome}</option>`).join("");
+
+  servicoAgenda.innerHTML = tipoPlano.innerHTML;
+  horaAgenda.innerHTML = gerarHorarios15().map(h=>`<option>${h}</option>`).join("");
+
+  listaClientes.innerHTML = db.clientes.map(c=>
+    `<li>${c.nome} ${c.plano?`| Plano ${c.plano.nome} (${c.plano.saldo})`:""}</li>`
+  ).join("");
+
+  listaPlanos.innerHTML = db.planos.map(p=>
+    `<li>${p.nome} - ${p.qtd} serviços</li>`
+  ).join("");
+
+  listaProdutos.innerHTML = db.produtos.map(p=>
+    `<li>${p.nome} (${p.tipo})</li>`
+  ).join("");
+
+  listaDespesas.innerHTML = db.despesas.map(d=>
+    `<li>${d.desc} - R$ ${d.valor}</li>`
+  ).join("");
+
+  listaAgenda.innerHTML = db.agenda
+    .filter(a=>a.data===dataAgenda.value)
+    .map(a=>`<li>${a.hora} | ${a.cliente} | ${a.servico}</li>`)
+    .join("");
 }
 
+/* ================= EXPOR PARA HTML ================= */
+window.show = show;
+window.abrirCaixa = abrirCaixa;
+window.salvarProduto = salvarProduto;
+window.salvarPlano = salvarPlano;
+window.salvarCliente = salvarCliente;
+window.salvarDespesa = salvarDespesa;
+window.salvarAgendamento = salvarAgendamento;
+window.addItem = addItem;
+window.finalizarVenda = finalizarVenda;
+window.gerarRelatorioMensal = gerarRelatorioMensal;
+window.renovarPlanoCliente = renovarPlanoCliente;
+
+/* ================= START ================= */
 render();
-// 🔁 RENOVAÇÃO DE PLANO (ADICIONAL — NÃO ALTERA O RESTO)
-function renovarPlanoCliente(){
-  // exige caixa aberto
-  if(!db.caixa || !db.caixa.aberto){
-    alert("Abra o caixa para renovar o plano");
-    return;
-  }
-
-  // usa o cliente selecionado no PDV
-  const nomeCliente = cliente && cliente.value;
-  if(!nomeCliente){
-    alert("Selecione um cliente");
-    return;
-  }
-
-  const c = db.clientes.find(c => c.nome === nomeCliente);
-  if(!c || !c.plano){
-    alert("Cliente não possui plano");
-    return;
-  }
-
-  const planoBase = db.planos.find(p => p.nome === c.plano.nome);
-  if(!planoBase){
-    alert("Plano base não encontrado");
-    return;
-  }
-
-  // soma saldo do plano
-  c.plano.saldo += planoBase.qtd;
-
-  // lança no caixa (mantém sua regra atual)
-  db.caixa.dinheiro = (db.caixa.dinheiro || 0) + planoBase.valor;
-
-  // registra venda
-  db.vendas.push({
-    data: new Date().toISOString(),
-    total: planoBase.valor,
-    tipo: "renovacao",
-    cliente: c.nome,
-    plano: planoBase.nome
-  });
-
-  save();
-  if(typeof render === "function") render();
-
-  alert("Plano renovado com sucesso");
-}
