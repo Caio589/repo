@@ -35,15 +35,37 @@ function salvarCliente(){
   save();render();
 }
 function renovarPlanoCliente(){
-  const c=db.clientes.find(c=>c.nome===cliente.value);
-  if(!c||!c.plano)return alert("Cliente sem plano");
-  const p=db.planos.find(p=>p.nome===c.plano.nome);
-  c.plano.saldo+=p.qtd;
-  db.caixa.dinheiro+=p.valor;
-  db.vendas.push({data:new Date().toISOString(),total:p.valor});
-  save();render();
-}
+  if(!db.caixa.aberto){
+    alert("Abra o caixa para renovar o plano");
+    return;
+  }
 
+  const c = db.clientes.find(c=>c.nome===cliente.value);
+  if(!c || !c.plano){
+    alert("Cliente sem plano");
+    return;
+  }
+
+  const plano = db.planos.find(p=>p.nome===c.plano.nome);
+  if(!plano){
+    alert("Plano não encontrado");
+    return;
+  }
+
+  // entra no caixa como venda
+  db.caixa.dinheiro += plano.valor;
+  db.vendas.push({
+    data:new Date().toISOString(),
+    total:plano.valor,
+    tipo:"renovacao"
+  });
+
+  // renova saldo
+  c.plano.saldo += plano.qtd;
+
+  save();
+  render();
+}
 /* ===== DESPESAS ===== */
 function salvarDespesa(){
   db.despesas.push({desc:descDespesa.value,valor:+valorDespesa.value||0,data:new Date().toISOString()});
