@@ -28,6 +28,7 @@ function cadastrarPlano(){
     valor:+valorPlano.value
   });
   localStorage.setItem("planos",JSON.stringify(planos));
+  nomePlano.value=qtdPlano.value=valorPlano.value="";
   render();
 }
 
@@ -39,6 +40,7 @@ function cadastrarCliente(){
     plano: p ? { nome:p.nome, total:p.total, usados:0 } : null
   });
   localStorage.setItem("clientes",JSON.stringify(clientes));
+  nomeCliente.value="";
   render();
 }
 
@@ -46,13 +48,14 @@ function cadastrarCliente(){
 function cadastrarServico(){
   servicos.push({ nome:nomeServico.value, preco:+precoServico.value });
   localStorage.setItem("servicos",JSON.stringify(servicos));
+  nomeServico.value=precoServico.value="";
   render();
 }
 
 /* CAIXA */
 function abrirCaixa(){
   caixa = { valorInicial:+valorInicial.value, vendas:[] };
-  salvar();
+  localStorage.setItem("caixa",JSON.stringify(caixa));
   render();
 }
 
@@ -72,44 +75,52 @@ function registrarVenda(){
   }
 
   caixa.vendas.push({ cliente:c.nome, servico:s.nome, valor });
-  salvar();
+  localStorage.setItem("caixa",JSON.stringify(caixa));
   localStorage.setItem("clientes",JSON.stringify(clientes));
   render();
 }
 
 function fecharCaixa(){
   localStorage.removeItem("caixa");
-  caixa = null;
+  caixa=null;
   render();
 }
 
-function salvar(){
-  localStorage.setItem("caixa",JSON.stringify(caixa));
-}
-
+/* RENDER SEM ERRO */
 function render(){
-  /* selects */
-  clienteVenda.innerHTML="";
-  clientes.forEach((c,i)=>{
-    let info = c.plano ? `(${c.plano.total-c.plano.usados})` : "";
-    clienteVenda.innerHTML += `<option value="${i}">${c.nome} ${info}</option>`;
-  });
+  /* SELECT CLIENTES */
+  const selCliente = document.getElementById("clienteVenda");
+  if(selCliente){
+    selCliente.innerHTML="";
+    clientes.forEach((c,i)=>{
+      let info = c.plano ? `(${c.plano.total-c.plano.usados})` : "";
+      selCliente.innerHTML += `<option value="${i}">${c.nome} ${info}</option>`;
+    });
+  }
 
-  servicoVenda.innerHTML="";
-  servicos.forEach((s,i)=>{
-    servicoVenda.innerHTML += `<option value="${i}">${s.nome}</option>`;
-  });
+  /* SELECT SERVIÇOS */
+  const selServico = document.getElementById("servicoVenda");
+  if(selServico){
+    selServico.innerHTML="";
+    servicos.forEach((s,i)=>{
+      selServico.innerHTML += `<option value="${i}">${s.nome}</option>`;
+    });
+  }
 
-  planoCliente.innerHTML=`<option value="">Sem plano</option>`;
-  planos.forEach((p,i)=>{
-    planoCliente.innerHTML += `<option value="${i}">${p.nome}</option>`;
-  });
+  /* SELECT PLANOS */
+  const selPlano = document.getElementById("planoCliente");
+  if(selPlano){
+    selPlano.innerHTML = `<option value="">Sem plano</option>`;
+    planos.forEach((p,i)=>{
+      selPlano.innerHTML += `<option value="${i}">${p.nome}</option>`;
+    });
+  }
 
   if(!caixa) return;
   const total = caixa.vendas.reduce((s,v)=>s+v.valor,0);
   resInicial.innerText = caixa.valorInicial.toFixed(2);
   resVendas.innerText = total.toFixed(2);
-  resTotal.innerText = (total+caixa.valorInicial).toFixed(2);
+  resTotal.innerText = (total + caixa.valorInicial).toFixed(2);
 }
 
 function gerarPDF(){
