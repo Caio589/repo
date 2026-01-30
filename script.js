@@ -28,6 +28,19 @@ db.caixa.cartao ||= 0;
 
 let carrinho = [];
 
+/* ===== ELEMENTOS DO DOM ===== */
+const carrinhoTable = document.getElementById("carrinho");
+const totalSpan = document.getElementById("total");
+const statusCaixaEl = document.getElementById("statusCaixa");
+const abrirBoxEl = document.getElementById("abrirBox");
+const resumoCaixaEl = document.getElementById("resumoCaixa");
+
+const listaProdutosEl = document.getElementById("listaProdutos");
+const listaClientesEl = document.getElementById("listaClientes");
+const listaPlanosEl = document.getElementById("listaPlanos");
+const listaDespesasEl = document.getElementById("listaDespesas");
+const listaAgendaEl = document.getElementById("listaAgenda");
+
 function save(){
   localStorage.setItem("db", JSON.stringify(db));
 }
@@ -196,17 +209,16 @@ function finalizarVenda(){
 
 /* ================= CARRINHO ================= */
 function renderCarrinho(){
-  const carrinhoElem = document.getElementById("carrinho");
-  let h="<tr><th>Item</th><th>Valor</th></tr>";
-  let s=0;
+  let h = "<tr><th>Item</th><th>Valor</th></tr>";
+  let s = 0;
 
   carrinho.forEach(i=>{
-    h+=`<tr><td>${i.nome}</td><td>R$ ${i.valor.toFixed(2)}</td></tr>`;
-    s+=i.valor;
+    h += `<tr><td>${i.nome}</td><td>R$ ${i.valor.toFixed(2)}</td></tr>`;
+    s += i.valor;
   });
 
-  carrinhoElem.innerHTML=h;
-  total.innerText=s.toFixed(2);
+  carrinhoTable.innerHTML = h;
+  totalSpan.innerText = s.toFixed(2);
 }
 
 /* ================= RELATÓRIO ================= */
